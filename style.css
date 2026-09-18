@@ -1,506 +1,569 @@
-/* ================================================================
-   TOKENS
-================================================================= */
-:root{
-  --bg:            #14110d;
-  --bg-raised:     #1c1712;
-  --bg-sunken:     #100d09;
-  --border:        #34291c;
-  --border-soft:   #241d15;
+(() => {
+  'use strict';
 
-  --ink:           #f1e6d3;
-  --ink-dim:       #a8967c;
-  --ink-faint:     #6b5d4a;
+  /* ==============================================================
+     ELEMENTS
+  =============================================================== */
+  const codeEl        = document.getElementById('code');
+  const gutterEl       = document.getElementById('gutter');
+  const highlightCode  = document.getElementById('highlight-code');
+  const editorShell    = document.getElementById('editor-shell');
+  const cursorPosEl    = document.getElementById('cursor-pos');
 
-  --amber:         #ffb648;
-  --amber-dim:     #b8873a;
-  --amber-glow:    rgba(255, 182, 72, 0.35);
+  const btnRun    = document.getElementById('btn-run');
+  const runLabel  = document.getElementById('run-label');
+  const btnCopy   = document.getElementById('btn-copy');
+  const btnClear  = document.getElementById('btn-clear');
+  const exampleSelect = document.getElementById('example-select');
 
-  --red:           #ff6b57;
-  --red-bg:        rgba(255, 107, 87, 0.1);
-  --green:         #8bc789;
+  const tabOutput   = document.getElementById('tab-output');
+  const tabErrors   = document.getElementById('tab-errors');
+  const panelOutput = document.getElementById('panel-output');
+  const panelErrors = document.getElementById('panel-errors');
+  const outputEmpty = document.getElementById('output-empty');
+  const outputStream = document.getElementById('output-stream');
+  const errorsEmpty  = document.getElementById('errors-empty');
+  const errorsStream = document.getElementById('errors-stream');
+  const errorBadge   = document.getElementById('error-badge');
+  const runMeta      = document.getElementById('run-meta');
 
-  --font-ui:   "Space Grotesk", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  const stdinBox = document.getElementById('stdin-box');
+  const symbolsRow = document.getElementById('symbols-row');
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  const statusDot  = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
 
-  --ease: cubic-bezier(.4,0,.2,1);
+  /* ==============================================================
+     EXAMPLE PROGRAMS â€” covers a broad spread of core C concepts
+  =============================================================== */
+  const EXAMPLES = {
+    'Hello, World': `#include <stdio.h>
+
+int main(void) {
+    printf("Hello, World!\\n");
+    return 0;
+}
+`,
+    'Variables & operators': `#include <stdio.h>
+
+int main(void) {
+    int a = 12, b = 5;
+    float ratio = (float)a / b;
+
+    printf("a + b = %d\\n", a + b);
+    printf("a - b = %d\\n", a - b);
+    printf("a * b = %d\\n", a * b);
+    printf("a / b = %.3f\\n", ratio);
+    printf("a %% b = %d\\n", a % b);
+    return 0;
+}
+`,
+    'If / else & loops': `#include <stdio.h>
+
+int main(void) {
+    for (int i = 1; i <= 10; i++) {
+        if (i % 15 == 0)      printf("fizzbuzz\\n");
+        else if (i % 3 == 0)  printf("fizz\\n");
+        else if (i % 5 == 0)  printf("buzz\\n");
+        else                  printf("%d\\n", i);
+    }
+    return 0;
+}
+`,
+    'Arrays & strings': `#include <stdio.h>
+#include <string.h>
+
+int main(void) {
+    char name[32];
+    printf("Enter your name: ");
+    fgets(name, sizeof(name), stdin);
+    name[strcspn(name, "\\n")] = '\\0';
+
+    int nums[5] = {4, 8, 15, 16, 23};
+    int sum = 0;
+    for (int i = 0; i < 5; i++) sum += nums[i];
+
+    printf("Hello, %s! Array sum = %d\\n", name, sum);
+    return 0;
+}
+`,
+    'Pointers': `#include <stdio.h>
+
+void swap(int *a, int *b) {
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
 }
 
-@media (prefers-color-scheme: light){
-  :root{ color-scheme: dark; }
+int main(void) {
+    int x = 3, y = 9;
+    printf("before: x=%d y=%d\\n", x, y);
+    swap(&x, &y);
+    printf("after:  x=%d y=%d\\n", x, y);
+    return 0;
+}
+`,
+    'Structs': `#include <stdio.h>
+
+typedef struct {
+    char name[16];
+    int hp;
+    float speed;
+} Character;
+
+int main(void) {
+    Character hero = {"Nyx", 100, 5.5f};
+    printf("%s | hp=%d | speed=%.1f\\n", hero.name, hero.hp, hero.speed);
+    hero.hp -= 30;
+    printf("after battle: hp=%d\\n", hero.hp);
+    return 0;
+}
+`,
+    'Recursion (Fibonacci)': `#include <stdio.h>
+
+long fib(int n) {
+    if (n < 2) return n;
+    return fib(n - 1) + fib(n - 2);
 }
 
-*,*::before,*::after{ box-sizing: border-box; }
-
-html,body{
-  height: 100%;
+int main(void) {
+    for (int i = 0; i < 12; i++) {
+        printf("fib(%d) = %ld\\n", i, fib(i));
+    }
+    return 0;
 }
+`,
+    'Dynamic memory': `#include <stdio.h>
+#include <stdlib.h>
 
-body{
-  margin: 0;
-  background:
-    repeating-linear-gradient(180deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px),
-    radial-gradient(1100px 520px at 15% -10%, rgba(255,182,72,0.07), transparent 60%),
-    var(--bg);
-  color: var(--ink);
-  font-family: var(--font-ui);
-  -webkit-font-smoothing: antialiased;
+int main(void) {
+    int n = 6;
+    int *arr = malloc(n * sizeof(int));
+    if (!arr) return 1;
+
+    for (int i = 0; i < n; i++) arr[i] = i * i;
+    for (int i = 0; i < n; i++) printf("%d ", arr[i]);
+    printf("\\n");
+
+    free(arr);
+    return 0;
 }
+`,
+    'Sorting (bubble sort)': `#include <stdio.h>
 
-:focus-visible{
-  outline: 2px solid var(--amber);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-@media (prefers-reduced-motion: reduce){
-  *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
-}
-
-/* ================================================================
-   LAYOUT SHELL
-================================================================= */
-.app{
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 18px 20px 28px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++)
+        for (int j = 0; j < n - i - 1; j++)
+            if (arr[j] > arr[j + 1]) {
+                int t = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = t;
+            }
 }
 
-/* ================================================================
-   TOPBAR
-================================================================= */
-.topbar{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+int main(void) {
+    int arr[] = {64, 25, 12, 22, 11};
+    int n = sizeof(arr) / sizeof(arr[0]);
+    bubbleSort(arr, n);
+    for (int i = 0; i < n; i++) printf("%d ", arr[i]);
+    printf("\\n");
+    return 0;
+}
+`,
+    'Linked list': `#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct Node {
+    int data;
+    struct Node *next;
+} Node;
+
+Node *push(Node *head, int val) {
+    Node *n = malloc(sizeof(Node));
+    n->data = val;
+    n->next = head;
+    return n;
 }
 
-.brand{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+int main(void) {
+    Node *head = NULL;
+    for (int i = 1; i <= 5; i++) head = push(head, i);
 
-.brand__mark{
-  width: 30px;
-  height: 30px;
-  color: var(--amber);
-  flex-shrink: 0;
+    for (Node *cur = head; cur; cur = cur->next)
+        printf("%d -> ", cur->data);
+    printf("NULL\\n");
+    return 0;
 }
+`,
+  };
 
-.brand__text{
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
+  /* ==============================================================
+     SYMBOL STRIP â€” quick-insert buttons for common C symbols
+  =============================================================== */
+  const SYMBOLS = [
+    '{', '}', '(', ')', '[', ']', ';', ',', '.',
+    '#', '*', '&', '%', '"', "'",
+    '->', '++', '--', '==', '!=', '<=', '>=',
+    '&&', '||', '<<', '>>', '\\n',
+  ];
 
-.brand__title{
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-}
+  SYMBOLS.forEach(sym => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sym-btn';
+    b.textContent = sym;
+    b.setAttribute('aria-label', `Insert ${sym}`);
+    b.addEventListener('click', () => insertAtCursor(sym));
+    symbolsRow.appendChild(b);
+  });
 
-.brand__subtitle{
-  font-size: 12.5px;
-  color: var(--ink-faint);
-  letter-spacing: 0.01em;
-}
+  function insertAtCursor(text) {
+    const start = codeEl.selectionStart;
+    const end = codeEl.selectionEnd;
+    const value = codeEl.value;
+    codeEl.value = value.slice(0, start) + text + value.slice(end);
+    const caret = start + text.length;
+    codeEl.setSelectionRange(caret, caret);
+    codeEl.focus();
+    refreshEditor();
+  }
 
-.topbar__actions{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+  /* ==============================================================
+     EXAMPLES DROPDOWN
+  =============================================================== */
+  Object.keys(EXAMPLES).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    exampleSelect.appendChild(opt);
+  });
 
-/* ---------- buttons ---------- */
-.btn{
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-raised);
-  color: var(--ink);
-  font-family: var(--font-ui);
-  font-size: 13.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s var(--ease), background 0.15s var(--ease), transform 0.1s var(--ease);
-}
-.btn svg{ width: 15px; height: 15px; flex-shrink: 0; }
-.btn:hover{ border-color: var(--ink-faint); background: #221b13; }
-.btn:active{ transform: translateY(1px); }
+  exampleSelect.addEventListener('change', () => {
+    const name = exampleSelect.value;
+    if (EXAMPLES[name]) {
+      codeEl.value = EXAMPLES[name];
+      refreshEditor();
+      setStatus('idle', 'Ready');
+    }
+    exampleSelect.selectedIndex = 0;
+  });
 
-.btn--primary{
-  background: var(--amber);
-  border-color: var(--amber);
-  color: #201502;
-  font-weight: 700;
-  box-shadow: 0 0 0 0 var(--amber-glow);
-}
-.btn--primary:hover{ background: #ffc266; border-color: #ffc266; }
-.btn--primary:disabled{
-  opacity: 0.6;
-  cursor: progress;
-  transform: none;
-}
+  /* ==============================================================
+     SYNTAX HIGHLIGHTING (lightweight, regex based)
+  =============================================================== */
+  const KEYWORDS = new Set([
+    'if','else','for','while','do','switch','case','default','break','continue',
+    'return','goto','typedef','struct','union','enum','sizeof','static','extern',
+    'const','volatile','register','inline','restrict','void','signed','unsigned',
+    'auto','_Bool','_Complex','_Imaginary',
+  ]);
 
-.btn--ghost{ color: var(--ink-dim); }
+  const TYPES = new Set([
+    'int','char','float','double','long','short','size_t','FILE','NULL',
+    'int8_t','int16_t','int32_t','int64_t','uint8_t','uint16_t','uint32_t','uint64_t',
+  ]);
 
-/* ---------- example select ---------- */
-.select select{
-  height: 38px;
-  padding: 0 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-raised);
-  color: var(--ink-dim);
-  font-family: var(--font-ui);
-  font-size: 13.5px;
-  cursor: pointer;
-  max-width: 180px;
-}
-.select select:hover{ border-color: var(--ink-faint); }
+  const TOKEN_RE = /(\/\/[^\n]*)|(\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*")|('(?:\\.|[^'\\\n])*')|(#\s*\w+)|(\b0[xX][0-9a-fA-F]+\b|\b\d+\.?\d*(?:[eE][+-]?\d+)?[fFlLuU]*\b)|(\b[A-Za-z_]\w*\b)(\s*\()?/g;
 
-/* ================================================================
-   SYMBOL STRIP
-================================================================= */
-.symbols{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--bg-sunken);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-}
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
-.symbols__label{
-  font-size: 11px;
-  text-transform: lowercase;
-  color: var(--ink-faint);
-  flex-shrink: 0;
-  padding-right: 6px;
-  border-right: 1px solid var(--border-soft);
-}
+  function highlight(src) {
+    let out = '';
+    let lastIndex = 0;
+    TOKEN_RE.lastIndex = 0;
+    let m;
+    while ((m = TOKEN_RE.exec(src)) !== null) {
+      out += escapeHtml(src.slice(lastIndex, m.index));
+      const [full, comLine, comBlock, str, chr, pre, num, ident, followedByParen] = m;
+      if (comLine || comBlock) {
+        out += `<span class="tok-com">${escapeHtml(comLine || comBlock)}</span>`;
+      } else if (str) {
+        out += `<span class="tok-str">${escapeHtml(str)}</span>`;
+      } else if (chr) {
+        out += `<span class="tok-str">${escapeHtml(chr)}</span>`;
+      } else if (pre) {
+        out += `<span class="tok-pre">${escapeHtml(pre)}</span>`;
+      } else if (num) {
+        out += `<span class="tok-num">${escapeHtml(num)}</span>`;
+      } else if (ident) {
+        if (KEYWORDS.has(ident)) {
+          out += `<span class="tok-kw">${escapeHtml(ident)}</span>`;
+        } else if (TYPES.has(ident)) {
+          out += `<span class="tok-type">${escapeHtml(ident)}</span>`;
+        } else if (followedByParen) {
+          out += `<span class="tok-fn">${escapeHtml(ident)}</span>${escapeHtml(followedByParen)}`;
+        } else {
+          out += escapeHtml(ident);
+        }
+      }
+      lastIndex = TOKEN_RE.lastIndex;
+    }
+    out += escapeHtml(src.slice(lastIndex));
+    return out;
+  }
 
-.symbols__row{
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
+  /* ==============================================================
+     EDITOR: gutter, highlighting, scroll sync, cursor position
+  =============================================================== */
+  function updateGutter() {
+    const lines = codeEl.value.split('\n').length;
+    let s = '';
+    for (let i = 1; i <= lines; i++) s += i + '\n';
+    gutterEl.textContent = s;
+  }
 
-.sym-btn{
-  flex-shrink: 0;
-  min-width: 34px;
-  height: 30px;
-  padding: 0 9px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-  background: var(--bg-raised);
-  color: var(--amber);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.12s var(--ease), border-color 0.12s var(--ease);
-}
-.sym-btn:hover{ background: #241c12; border-color: var(--amber-dim); }
-.sym-btn:active{ background: #2c2013; }
+  function updateHighlight() {
+    // trailing newline keeps last empty line height in sync
+    highlightCode.innerHTML = highlight(codeEl.value) + '\n';
+  }
 
-/* ================================================================
-   WORKSPACE â€” two panes
-================================================================= */
-.workspace{
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 14px;
-  min-height: 0;
-}
+  function updateCursorPos() {
+    const value = codeEl.value;
+    const pos = codeEl.selectionStart;
+    const before = value.slice(0, pos);
+    const line = before.split('\n').length;
+    const col = pos - before.lastIndexOf('\n');
+    cursorPosEl.textContent = `Ln ${line}, Col ${col}`;
+  }
 
-@media (max-width: 880px){
-  .workspace{ grid-template-columns: 1fr; }
-}
+  function syncScroll() {
+    gutterEl.scrollTop = codeEl.scrollTop;
+    highlightCode.parentElement.scrollTop = codeEl.scrollTop;
+    highlightCode.parentElement.scrollLeft = codeEl.scrollLeft;
+  }
 
-.pane{
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  min-height: 420px;
-}
+  function refreshEditor() {
+    updateGutter();
+    updateHighlight();
+    updateCursorPos();
+    syncScroll();
+  }
 
-.pane__bar{
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 6px 0 14px;
-  height: 42px;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--bg-sunken);
-  flex-shrink: 0;
-}
+  codeEl.addEventListener('input', refreshEditor);
+  codeEl.addEventListener('scroll', syncScroll);
+  codeEl.addEventListener('keyup', updateCursorPos);
+  codeEl.addEventListener('click', updateCursorPos);
 
-.pane__bar-meta{
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--ink-faint);
-  padding-right: 10px;
-  white-space: nowrap;
-}
+  codeEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      insertAtCursor('    ');
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      runCode();
+    } else if (e.key === 'Enter') {
+      // auto-indent: continue the previous line's leading whitespace,
+      // and add one extra level after an opening brace
+      const start = codeEl.selectionStart;
+      const value = codeEl.value;
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      const currentLine = value.slice(lineStart, start);
+      const indentMatch = currentLine.match(/^[ \t]*/);
+      let indent = indentMatch ? indentMatch[0] : '';
+      if (/[{[(]\s*$/.test(currentLine)) indent += '    ';
+      if (indent) {
+        e.preventDefault();
+        insertAtCursor('\n' + indent);
+      }
+    }
+  });
 
-.file-tab{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--ink-dim);
-}
-.file-tab__dot{
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--amber);
-  box-shadow: 0 0 8px var(--amber-glow);
-}
+  /* ==============================================================
+     COPY / CLEAR
+  =============================================================== */
+  btnCopy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(codeEl.value);
+      flashButton(btnCopy, 'Copied');
+    } catch (err) {
+      codeEl.select();
+      document.execCommand('copy');
+      flashButton(btnCopy, 'Copied');
+    }
+  });
 
-/* ---------- tabs (output/diagnostics) ---------- */
-.tabs{ padding-left: 4px; gap: 2px; }
-.tab{
-  height: 42px;
-  padding: 0 14px;
-  border: none;
-  background: transparent;
-  color: var(--ink-faint);
-  font-family: var(--font-ui);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: color 0.12s var(--ease);
-}
-.tab:hover{ color: var(--ink-dim); }
-.tab.is-active{
-  color: var(--ink);
-  border-bottom-color: var(--amber);
-}
-.tab__badge{
-  background: var(--red);
-  color: #200;
-  font-size: 10.5px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 3px 6px;
-  border-radius: 999px;
-}
+  btnClear.addEventListener('click', () => {
+    if (!codeEl.value.trim() || confirm('Clear the editor? This cannot be undone.')) {
+      codeEl.value = '';
+      refreshEditor();
+      codeEl.focus();
+      setStatus('idle', 'Ready');
+    }
+  });
 
-/* ================================================================
-   EDITOR
-================================================================= */
-.editor{
-  position: relative;
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  background: var(--bg-sunken);
-}
+  function flashButton(btn, text) {
+    const span = btn.querySelector('span');
+    const original = span.textContent;
+    span.textContent = text;
+    setTimeout(() => { span.textContent = original; }, 1200);
+  }
 
-.editor__gutter{
-  flex-shrink: 0;
-  padding: 14px 10px 14px 14px;
-  text-align: right;
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--ink-faint);
-  background: var(--bg-sunken);
-  border-right: 1px solid var(--border-soft);
-  white-space: pre;
-  user-select: none;
-  overflow: hidden;
-}
+  /* ==============================================================
+     TABS: Output / Diagnostics
+  =============================================================== */
+  function activateTab(which) {
+    const outActive = which === 'output';
+    tabOutput.classList.toggle('is-active', outActive);
+    tabErrors.classList.toggle('is-active', !outActive);
+    tabOutput.setAttribute('aria-selected', String(outActive));
+    tabErrors.setAttribute('aria-selected', String(!outActive));
+    panelOutput.hidden = !outActive;
+    panelErrors.hidden = outActive;
+  }
+  tabOutput.addEventListener('click', () => activateTab('output'));
+  tabErrors.addEventListener('click', () => activateTab('errors'));
 
-.editor__highlight,
-.editor__input{
-  position: absolute;
-  top: 0;
-  left: 44px;
-  right: 0;
-  bottom: 0;
-  margin: 0;
-  padding: 14px 16px;
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-  line-height: 1.6;
-  white-space: pre;
-  overflow: auto;
-  tab-size: 4;
-}
+  function setErrorBadge(count) {
+    if (count > 0) {
+      errorBadge.hidden = false;
+      errorBadge.textContent = String(count);
+    } else {
+      errorBadge.hidden = true;
+    }
+  }
 
-.editor__highlight{
-  color: var(--ink);
-  pointer-events: none;
-}
+  /* ==============================================================
+     STATUS BAR
+  =============================================================== */
+  function setStatus(kind, text) {
+    statusDot.className = 'statusbar__dot' + (kind === 'busy' ? ' is-busy' : kind === 'ok' ? ' is-ok' : kind === 'error' ? ' is-error' : '');
+    statusText.textContent = text;
+  }
 
-.editor__input{
-  background: transparent;
-  border: none;
-  color: transparent;
-  caret-color: var(--amber);
-  resize: none;
-  z-index: 1;
-}
-.editor__input::selection{ background: rgba(255,182,72,0.25); }
+  /* ==============================================================
+     COMPILE & RUN â€” via the public Piston execution API
+  =============================================================== */
+  const PISTON_URL = 'https://emkc.org/api/v2/piston/execute';
+  let isRunning = false;
 
-/* syntax token colors */
-.tok-kw{ color: var(--amber); font-weight: 600; }
-.tok-type{ color: #7fb0d9; }
-.tok-str{ color: #a3c586; }
-.tok-com{ color: var(--ink-faint); font-style: italic; }
-.tok-num{ color: #c993e0; }
-.tok-pre{ color: #d98c5f; }
-.tok-fn{ color: #e0c46f; }
+  async function runCode() {
+    if (isRunning) return;
+    const source = codeEl.value;
+    if (!source.trim()) {
+      setStatus('error', 'Nothing to run â€” write some code first');
+      return;
+    }
 
-/* ================================================================
-   OUTPUT PANES
-================================================================= */
-.output{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-sunken);
-}
+    isRunning = true;
+    btnRun.disabled = true;
+    runLabel.textContent = 'Runningâ€¦';
+    setStatus('busy', 'Compilingâ€¦');
+    runMeta.textContent = '';
 
-.output__empty{
-  margin: auto;
-  text-align: center;
-  max-width: 280px;
-  color: var(--ink-faint);
-  padding: 20px;
-}
-.output__empty svg{ width: 30px; height: 30px; margin-bottom: 10px; color: var(--ink-faint); }
-.output__empty p{ margin: 4px 0; font-size: 13.5px; }
-.output__empty strong{ color: var(--ink-dim); }
-.output__hint{ font-size: 12px !important; }
+    const started = performance.now();
 
-.output__stream{
-  margin: 0;
-  padding: 14px 16px;
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-  line-height: 1.65;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow: auto;
-  flex: 1;
-  color: var(--ink);
-}
+    try {
+      const res = await fetch(PISTON_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: 'c',
+          version: '*',
+          files: [{ name: 'main.c', content: source }],
+          stdin: stdinBox.value,
+          compile_timeout: 10000,
+          run_timeout: 5000,
+        }),
+      });
 
-.output__stream--errors{ color: var(--red); }
-.output__stream .line-ok{ color: var(--green); }
+      if (!res.ok) {
+        throw new Error(`Server responded ${res.status}`);
+      }
 
-.stdin-bar{
-  border-top: 1px solid var(--border-soft);
-  background: var(--bg-raised);
-  padding: 8px 14px 12px;
-  flex-shrink: 0;
-}
-.stdin-bar label{
-  display: block;
-  font-size: 11px;
-  color: var(--ink-faint);
-  margin-bottom: 5px;
-  text-transform: lowercase;
-}
-.stdin-bar textarea{
-  width: 100%;
-  height: 46px;
-  resize: vertical;
-  background: var(--bg-sunken);
-  border: 1px solid var(--border-soft);
-  border-radius: 6px;
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  padding: 8px 10px;
-  line-height: 1.5;
-}
-.stdin-bar textarea::placeholder{ color: var(--ink-faint); }
+      const data = await res.json();
+      const elapsed = ((performance.now() - started) / 1000).toFixed(2);
+      renderResult(data, elapsed);
 
-/* ================================================================
-   STATUS BAR
-================================================================= */
-.statusbar{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--ink-faint);
-  font-family: var(--font-mono);
-  padding: 2px 4px;
-}
-.statusbar__sep{ opacity: 0.5; }
-.statusbar__dot{
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--ink-faint);
-  flex-shrink: 0;
-}
-.statusbar__dot.is-busy{
-  background: var(--amber);
-  box-shadow: 0 0 6px var(--amber-glow);
-  animation: pulse 1s ease-in-out infinite;
-}
-.statusbar__dot.is-ok{ background: var(--green); }
-.statusbar__dot.is-error{ background: var(--red); }
+    } catch (err) {
+      showErrors(`Could not reach the compiler service.\n\n${err.message}\n\nCheck your internet connection and try again.`);
+      activateTab('errors');
+      setStatus('error', 'Network error');
+    } finally {
+      isRunning = false;
+      btnRun.disabled = false;
+      runLabel.textContent = 'Run';
+    }
+  }
 
-@keyframes pulse{
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
+  function renderResult(data, elapsed) {
+    const compile = data.compile || {};
+    const run = data.run || {};
+    const compileErr = (compile.stderr || '').trim();
+    const hadCompileFailure = compile.code && compile.code !== 0;
 
-/* ================================================================
-   SCROLLBARS
-================================================================= */
-::-webkit-scrollbar{ width: 10px; height: 10px; }
-::-webkit-scrollbar-track{ background: transparent; }
-::-webkit-scrollbar-thumb{
-  background: var(--border);
-  border-radius: 8px;
-  border: 2px solid var(--bg-sunken);
-}
-::-webkit-scrollbar-thumb:hover{ background: var(--ink-faint); }
+    if (hadCompileFailure || (compileErr && !run.stdout && run.code !== 0)) {
+      // Real compile-time failure: show diagnostics, no program output
+      const errorCount = (compileErr.match(/error:/g) || []).length || 1;
+      showErrors(compileErr || 'Compilation failed with no diagnostic output.');
+      setErrorBadge(errorCount);
+      showOutput('', true);
+      activateTab('errors');
+      setStatus('error', `Compilation failed Â· ${errorCount} error${errorCount === 1 ? '' : 's'}`);
+      runMeta.textContent = `exit ${compile.code}`;
+      return;
+    }
 
-/* ================================================================
-   RESPONSIVE
-================================================================= */
-@media (max-width: 640px){
-  .app{ padding: 12px 12px 20px; gap: 10px; }
-  .brand__subtitle{ display: none; }
-  .topbar__actions .btn span{ display: none; }
-  .topbar__actions .btn{ padding: 0 10px; }
-  .select select{ max-width: 120px; }
-  .pane{ min-height: 320px; }
-  .pane__bar-meta{ display: none; }
-}
+    // Compiled fine â€” show warnings (if any) in diagnostics, program output in Output
+    if (compileErr) {
+      const warningCount = (compileErr.match(/warning:/g) || []).length;
+      showErrors(compileErr);
+      setErrorBadge(warningCount);
+    } else {
+      showErrors('');
+      setErrorBadge(0);
+    }
+
+    const stdout = run.stdout || '';
+    const stderr = run.stderr || '';
+    let combined = stdout;
+    if (stderr.trim()) {
+      combined += (combined && !combined.endsWith('\n') ? '\n' : '') + stderr;
+    }
+    showOutput(combined || '(program produced no output)', false);
+
+    const exitCode = run.code;
+    runMeta.textContent = `exit ${exitCode} Â· ${elapsed}s`;
+
+    if (exitCode === 0) {
+      setStatus('ok', `Finished Â· exit 0 Â· ${elapsed}s`);
+    } else if (run.signal) {
+      setStatus('error', `Terminated by ${run.signal} Â· ${elapsed}s`);
+      activateTab('output');
+    } else {
+      setStatus('error', `Exited with code ${exitCode} Â· ${elapsed}s`);
+    }
+  }
+
+  function showOutput(text, isEmpty) {
+    if (isEmpty || !text) {
+      outputStream.hidden = true;
+      outputEmpty.hidden = false;
+    } else {
+      outputStream.hidden = false;
+      outputEmpty.hidden = true;
+      outputStream.textContent = text;
+    }
+  }
+
+  function showErrors(text) {
+    if (!text || !text.trim()) {
+      errorsStream.hidden = true;
+      errorsEmpty.hidden = false;
+    } else {
+      errorsStream.hidden = false;
+      errorsEmpty.hidden = true;
+      errorsStream.textContent = text;
+    }
+  }
+
+  btnRun.addEventListener('click', runCode);
+
+  /* ==============================================================
+     INIT
+  =============================================================== */
+  codeEl.value = EXAMPLES['Hello, World'];
+  refreshEditor();
+  setStatus('idle', 'Ready');
+})();
