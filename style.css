@@ -10,9 +10,9 @@ body {
 }
 
 .container {
-    width: 92%;
+    width: 94%;
     max-width: 900px;
-    margin: 40px auto;
+    margin: 30px auto;
     text-align: center;
 }
 
@@ -24,37 +24,52 @@ h1 {
 p {
     color: #cbd5e1;
     font-size: 17px;
-    margin-bottom: 25px;
 }
 
 textarea {
     width: 100%;
     min-height: 350px;
     padding: 18px;
-    border: 1px solid #334155;
-    border-radius: 12px;
     background: #020617;
     color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 12px;
     font-family: monospace;
     font-size: 16px;
     resize: vertical;
     outline: none;
 }
 
-button {
-    margin-top: 18px;
-    padding: 13px 28px;
+.symbol-keyboard {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.symbol-keyboard button {
+    padding: 13px 5px;
+    border: none;
+    border-radius: 7px;
+    background: #1e293b;
+    color: white;
+    font-size: 20px;
+    font-family: monospace;
+}
+
+.symbol-keyboard button:active {
+    background: #334155;
+}
+
+.run {
+    margin-top: 20px;
+    padding: 14px 30px;
     border: none;
     border-radius: 8px;
     background: #22c55e;
     color: white;
-    font-size: 17px;
+    font-size: 18px;
     font-weight: bold;
-    cursor: pointer;
-}
-
-button:hover {
-    opacity: 0.9;
 }
 
 h3 {
@@ -70,5 +85,4 @@ pre {
     color: #22c55e;
     text-align: left;
     white-space: pre-wrap;
-    overflow-x: auto;
 }
