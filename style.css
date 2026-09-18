@@ -1,569 +1,755 @@
-(() => {
-  'use strict';
-
-  /* ==============================================================
-     ELEMENTS
-  =============================================================== */
-  const codeEl        = document.getElementById('code');
-  const gutterEl       = document.getElementById('gutter');
-  const highlightCode  = document.getElementById('highlight-code');
-  const editorShell    = document.getElementById('editor-shell');
-  const cursorPosEl    = document.getElementById('cursor-pos');
-
-  const btnRun    = document.getElementById('btn-run');
-  const runLabel  = document.getElementById('run-label');
-  const btnCopy   = document.getElementById('btn-copy');
-  const btnClear  = document.getElementById('btn-clear');
-  const exampleSelect = document.getElementById('example-select');
-
-  const tabOutput   = document.getElementById('tab-output');
-  const tabErrors   = document.getElementById('tab-errors');
-  const panelOutput = document.getElementById('panel-output');
-  const panelErrors = document.getElementById('panel-errors');
-  const outputEmpty = document.getElementById('output-empty');
-  const outputStream = document.getElementById('output-stream');
-  const errorsEmpty  = document.getElementById('errors-empty');
-  const errorsStream = document.getElementById('errors-stream');
-  const errorBadge   = document.getElementById('error-badge');
-  const runMeta      = document.getElementById('run-meta');
-
-  const stdinBox = document.getElementById('stdin-box');
-  const symbolsRow = document.getElementById('symbols-row');
-
-  const statusDot  = document.getElementById('status-dot');
-  const statusText = document.getElementById('status-text');
-
-  /* ==============================================================
-     EXAMPLE PROGRAMS â€” covers a broad spread of core C concepts
-  =============================================================== */
-  const EXAMPLES = {
-    'Hello, World': `#include <stdio.h>
-
-int main(void) {
-    printf("Hello, World!\\n");
-    return 0;
-}
-`,
-    'Variables & operators': `#include <stdio.h>
-
-int main(void) {
-    int a = 12, b = 5;
-    float ratio = (float)a / b;
-
-    printf("a + b = %d\\n", a + b);
-    printf("a - b = %d\\n", a - b);
-    printf("a * b = %d\\n", a * b);
-    printf("a / b = %.3f\\n", ratio);
-    printf("a %% b = %d\\n", a % b);
-    return 0;
-}
-`,
-    'If / else & loops': `#include <stdio.h>
-
-int main(void) {
-    for (int i = 1; i <= 10; i++) {
-        if (i % 15 == 0)      printf("fizzbuzz\\n");
-        else if (i % 3 == 0)  printf("fizz\\n");
-        else if (i % 5 == 0)  printf("buzz\\n");
-        else                  printf("%d\\n", i);
-    }
-    return 0;
-}
-`,
-    'Arrays & strings': `#include <stdio.h>
-#include <string.h>
-
-int main(void) {
-    char name[32];
-    printf("Enter your name: ");
-    fgets(name, sizeof(name), stdin);
-    name[strcspn(name, "\\n")] = '\\0';
-
-    int nums[5] = {4, 8, 15, 16, 23};
-    int sum = 0;
-    for (int i = 0; i < 5; i++) sum += nums[i];
-
-    printf("Hello, %s! Array sum = %d\\n", name, sum);
-    return 0;
-}
-`,
-    'Pointers': `#include <stdio.h>
-
-void swap(int *a, int *b) {
-    int tmp = *a;
-    *a = *b;
-    *b = tmp;
+* {
+    box-sizing: border-box;
 }
 
-int main(void) {
-    int x = 3, y = 9;
-    printf("before: x=%d y=%d\\n", x, y);
-    swap(&x, &y);
-    printf("after:  x=%d y=%d\\n", x, y);
-    return 0;
-}
-`,
-    'Structs': `#include <stdio.h>
-
-typedef struct {
-    char name[16];
-    int hp;
-    float speed;
-} Character;
-
-int main(void) {
-    Character hero = {"Nyx", 100, 5.5f};
-    printf("%s | hp=%d | speed=%.1f\\n", hero.name, hero.hp, hero.speed);
-    hero.hp -= 30;
-    printf("after battle: hp=%d\\n", hero.hp);
-    return 0;
-}
-`,
-    'Recursion (Fibonacci)': `#include <stdio.h>
-
-long fib(int n) {
-    if (n < 2) return n;
-    return fib(n - 1) + fib(n - 2);
+:root {
+    --bg: #0b1120;
+    --card: #111827;
+    --card2: #0f172a;
+    --border: #263244;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --green: #22c55e;
+    --green-dark: #16a34a;
+    --blue: #3b82f6;
+    --red: #ef4444;
+    --input: #080d18;
 }
 
-int main(void) {
-    for (int i = 0; i < 12; i++) {
-        printf("fib(%d) = %ld\\n", i, fib(i));
-    }
-    return 0;
-}
-`,
-    'Dynamic memory': `#include <stdio.h>
-#include <stdlib.h>
-
-int main(void) {
-    int n = 6;
-    int *arr = malloc(n * sizeof(int));
-    if (!arr) return 1;
-
-    for (int i = 0; i < n; i++) arr[i] = i * i;
-    for (int i = 0; i < n; i++) printf("%d ", arr[i]);
-    printf("\\n");
-
-    free(arr);
-    return 0;
-}
-`,
-    'Sorting (bubble sort)': `#include <stdio.h>
-
-void bubbleSort(int arr[], int n) {
-    for (int i = 0; i < n - 1; i++)
-        for (int j = 0; j < n - i - 1; j++)
-            if (arr[j] > arr[j + 1]) {
-                int t = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = t;
-            }
+body.light {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --card2: #f8fafc;
+    --border: #dbe2ea;
+    --text: #0f172a;
+    --muted: #64748b;
+    --input: #f8fafc;
 }
 
-int main(void) {
-    int arr[] = {64, 25, 12, 22, 11};
-    int n = sizeof(arr) / sizeof(arr[0]);
-    bubbleSort(arr, n);
-    for (int i = 0; i < n; i++) printf("%d ", arr[i]);
-    printf("\\n");
-    return 0;
-}
-`,
-    'Linked list': `#include <stdio.h>
-#include <stdlib.h>
-
-typedef struct Node {
-    int data;
-    struct Node *next;
-} Node;
-
-Node *push(Node *head, int val) {
-    Node *n = malloc(sizeof(Node));
-    n->data = val;
-    n->next = head;
-    return n;
+html {
+    scroll-behavior: smooth;
 }
 
-int main(void) {
-    Node *head = NULL;
-    for (int i = 1; i <= 5; i++) head = push(head, i);
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 
-    for (Node *cur = head; cur; cur = cur->next)
-        printf("%d -> ", cur->data);
-    printf("NULL\\n");
-    return 0;
+    transition: background 0.25s ease,
+                color 0.25s ease;
 }
-`,
-  };
 
-  /* ==============================================================
-     SYMBOL STRIP â€” quick-insert buttons for common C symbols
-  =============================================================== */
-  const SYMBOLS = [
-    '{', '}', '(', ')', '[', ']', ';', ',', '.',
-    '#', '*', '&', '%', '"', "'",
-    '->', '++', '--', '==', '!=', '<=', '>=',
-    '&&', '||', '<<', '>>', '\\n',
-  ];
 
-  SYMBOLS.forEach(sym => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'sym-btn';
-    b.textContent = sym;
-    b.setAttribute('aria-label', `Insert ${sym}`);
-    b.addEventListener('click', () => insertAtCursor(sym));
-    symbolsRow.appendChild(b);
-  });
+/* =========================
+   TOP BAR
+========================= */
 
-  function insertAtCursor(text) {
-    const start = codeEl.selectionStart;
-    const end = codeEl.selectionEnd;
-    const value = codeEl.value;
-    codeEl.value = value.slice(0, start) + text + value.slice(end);
-    const caret = start + text.length;
-    codeEl.setSelectionRange(caret, caret);
-    codeEl.focus();
-    refreshEditor();
-  }
+.topbar {
+    width: 100%;
+    min-height: 72px;
 
-  /* ==============================================================
-     EXAMPLES DROPDOWN
-  =============================================================== */
-  Object.keys(EXAMPLES).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    exampleSelect.appendChild(opt);
-  });
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
-  exampleSelect.addEventListener('change', () => {
-    const name = exampleSelect.value;
-    if (EXAMPLES[name]) {
-      codeEl.value = EXAMPLES[name];
-      refreshEditor();
-      setStatus('idle', 'Ready');
+    padding: 12px 5%;
+
+    border-bottom: 1px solid var(--border);
+
+    background: var(--card);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo {
+    width: 45px;
+    height: 45px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: linear-gradient(
+        135deg,
+        #22c55e,
+        #16a34a
+    );
+
+    color: white;
+    font-weight: 900;
+    font-size: 18px;
+}
+
+.brand h1 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.brand h1 span {
+    color: var(--green);
+}
+
+.brand small {
+    color: var(--muted);
+}
+
+.top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon-btn,
+.about-btn {
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--text);
+
+    border-radius: 8px;
+    padding: 9px 13px;
+
+    cursor: pointer;
+}
+
+.icon-btn:hover,
+.about-btn:hover {
+    border-color: var(--green);
+}
+
+
+/* =========================
+   MAIN
+========================= */
+
+.container {
+    width: 94%;
+    max-width: 1100px;
+    margin: auto;
+}
+
+
+/* =========================
+   HERO
+========================= */
+
+.hero {
+    text-align: center;
+    padding: 45px 10px 30px;
+}
+
+.hero h2 {
+    margin: 0 0 10px;
+
+    font-size: clamp(30px, 5vw, 48px);
+
+    background: linear-gradient(
+        90deg,
+        #22c55e,
+        #3b82f6
+    );
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.hero p {
+    margin: auto;
+
+    max-width: 650px;
+
+    color: var(--muted);
+
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+
+/* =========================
+   COMPILER
+========================= */
+
+.compiler {
+    overflow: hidden;
+
+    border: 1px solid var(--border);
+    border-radius: 16px;
+
+    background: var(--card);
+
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+
+/* =========================
+   TOOLBAR
+========================= */
+
+.toolbar {
+    min-height: 64px;
+
+    padding: 10px 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.toolbar-left,
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    flex-wrap: wrap;
+}
+
+select,
+button {
+    font: inherit;
+}
+
+select {
+    padding: 9px 12px;
+
+    border-radius: 8px;
+
+    border: 1px solid var(--border);
+
+    background: var(--card2);
+    color: var(--text);
+
+    cursor: pointer;
+}
+
+.tool-btn,
+.clear-btn {
+    padding: 9px 12px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 8px;
+
+    background: var(--card2);
+    color: var(--text);
+
+    cursor: pointer;
+}
+
+.tool-btn:hover,
+.clear-btn:hover {
+    border-color: var(--blue);
+}
+
+.run-btn {
+    border: none;
+
+    padding: 10px 18px;
+
+    border-radius: 8px;
+
+    background: var(--green);
+
+    color: white;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.run-btn:hover {
+    background: var(--green-dark);
+
+    transform: translateY(-1px);
+}
+
+.run-btn.running {
+    background: var(--red);
+}
+
+
+/* =========================
+   EDITOR HEADER
+========================= */
+
+.editor-header {
+    height: 43px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 15px;
+
+    background: var(--card2);
+
+    border-bottom: 1px solid var(--border);
+}
+
+.file-name {
+    color: var(--muted);
+
+    font-size: 14px;
+}
+
+.file-icon {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 22px;
+    height: 22px;
+
+    margin-right: 7px;
+
+    border-radius: 5px;
+
+    background: #1d4ed8;
+
+    color: white;
+
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.status {
+    color: var(--green);
+
+    font-size: 13px;
+}
+
+
+/* =========================
+   CODE EDITOR
+========================= */
+
+.editor {
+    display: flex;
+
+    height: 440px;
+
+    background: var(--input);
+
+    overflow: hidden;
+}
+
+.line-numbers {
+    width: 55px;
+
+    flex-shrink: 0;
+
+    padding: 18px 10px;
+
+    text-align: right;
+
+    overflow: hidden;
+
+    user-select: none;
+
+    color: #64748b;
+
+    background: var(--card2);
+
+    border-right: 1px solid var(--border);
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    font-size: 15px;
+
+    line-height: 1.6;
+}
+
+#code {
+    width: 100%;
+    height: 100%;
+
+    resize: none;
+
+    outline: none;
+    border: none;
+
+    padding: 18px;
+
+    background: transparent;
+
+    color: var(--text);
+
+    font-family:
+        "Fira Code",
+        "Courier New",
+        monospace;
+
+    font-size: 15px;
+
+    line-height: 1.6;
+
+    tab-size: 4;
+
+    white-space: pre;
+
+    overflow: auto;
+}
+
+#code::selection {
+    background: rgba(59, 130, 246, 0.35);
+}
+
+
+/* =========================
+   PANELS
+========================= */
+
+.panel {
+    border-top: 1px solid var(--border);
+}
+
+.panel-header {
+    height: 50px;
+
+    padding: 0 15px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    background: var(--card2);
+}
+
+.panel-header h3 {
+    margin: 0;
+
+    font-size: 14px;
+}
+
+.panel-header button {
+    padding: 6px 10px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 6px;
+
+    background: transparent;
+
+    color: var(--muted);
+
+    cursor: pointer;
+}
+
+.panel-header button:hover {
+    color: var(--text);
+}
+
+.input-box {
+    width: 100%;
+    min-height: 110px;
+
+    resize: vertical;
+
+    padding: 15px;
+
+    border: none;
+    outline: none;
+
+    background: var(--input);
+
+    color: var(--text);
+
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.output-panel {
+    min-height: 190px;
+}
+
+.output-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.terminal-dot {
+    width: 9px;
+    height: 9px;
+
+    border-radius: 50%;
+
+    background: var(--green);
+}
+
+.output {
+    min-height: 140px;
+
+    margin: 0;
+
+    padding: 18px;
+
+    overflow: auto;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    background: var(--input);
+
+    color: #d1d5db;
+
+    font-family:
+        "Courier New",
+        monospace;
+
+    line-height: 1.6;
+}
+
+
+/* =========================
+   FEATURES
+========================= */
+
+.features {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 15px;
+
+    margin: 25px 0 50px;
+}
+
+.feature-card {
+    padding: 22px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    background: var(--card);
+
+    text-align: center;
+}
+
+.feature-icon {
+    font-size: 28px;
+
+    margin-bottom: 10px;
+}
+
+.feature-card h3 {
+    margin: 5px 0 8px;
+}
+
+.feature-card p {
+    margin: 0;
+
+    color: var(--muted);
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================
+   MODAL
+========================= */
+
+.modal {
+    position: fixed;
+
+    inset: 0;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(0, 0, 0, 0.7);
+
+    z-index: 1000;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    position: relative;
+
+    width: 100%;
+    max-width: 480px;
+
+    padding: 30px;
+
+    border-radius: 16px;
+
+    background: var(--card);
+
+    border: 1px solid var(--border);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+}
+
+.modal-content p {
+    color: var(--muted);
+
+    line-height: 1.7;
+}
+
+.close-btn {
+    position: absolute;
+
+    top: 12px;
+    right: 15px;
+
+    border: none;
+
+    background: transparent;
+
+    color: var(--muted);
+
+    font-size: 28px;
+
+    cursor: pointer;
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+footer {
+    padding: 30px 15px;
+
+    text-align: center;
+
+    color: var(--muted);
+
+    border-top: 1px solid var(--border);
+
+    background: var(--card);
+}
+
+footer p {
+    margin: 5px;
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 800px) {
+
+    .features {
+        grid-template-columns:
+            repeat(2, 1fr);
     }
-    exampleSelect.selectedIndex = 0;
-  });
 
-  /* ==============================================================
-     SYNTAX HIGHLIGHTING (lightweight, regex based)
-  =============================================================== */
-  const KEYWORDS = new Set([
-    'if','else','for','while','do','switch','case','default','break','continue',
-    'return','goto','typedef','struct','union','enum','sizeof','static','extern',
-    'const','volatile','register','inline','restrict','void','signed','unsigned',
-    'auto','_Bool','_Complex','_Imaginary',
-  ]);
+    .toolbar {
+        align-items: stretch;
 
-  const TYPES = new Set([
-    'int','char','float','double','long','short','size_t','FILE','NULL',
-    'int8_t','int16_t','int32_t','int64_t','uint8_t','uint16_t','uint32_t','uint64_t',
-  ]);
-
-  const TOKEN_RE = /(\/\/[^\n]*)|(\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*")|('(?:\\.|[^'\\\n])*')|(#\s*\w+)|(\b0[xX][0-9a-fA-F]+\b|\b\d+\.?\d*(?:[eE][+-]?\d+)?[fFlLuU]*\b)|(\b[A-Za-z_]\w*\b)(\s*\()?/g;
-
-  function escapeHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function highlight(src) {
-    let out = '';
-    let lastIndex = 0;
-    TOKEN_RE.lastIndex = 0;
-    let m;
-    while ((m = TOKEN_RE.exec(src)) !== null) {
-      out += escapeHtml(src.slice(lastIndex, m.index));
-      const [full, comLine, comBlock, str, chr, pre, num, ident, followedByParen] = m;
-      if (comLine || comBlock) {
-        out += `<span class="tok-com">${escapeHtml(comLine || comBlock)}</span>`;
-      } else if (str) {
-        out += `<span class="tok-str">${escapeHtml(str)}</span>`;
-      } else if (chr) {
-        out += `<span class="tok-str">${escapeHtml(chr)}</span>`;
-      } else if (pre) {
-        out += `<span class="tok-pre">${escapeHtml(pre)}</span>`;
-      } else if (num) {
-        out += `<span class="tok-num">${escapeHtml(num)}</span>`;
-      } else if (ident) {
-        if (KEYWORDS.has(ident)) {
-          out += `<span class="tok-kw">${escapeHtml(ident)}</span>`;
-        } else if (TYPES.has(ident)) {
-          out += `<span class="tok-type">${escapeHtml(ident)}</span>`;
-        } else if (followedByParen) {
-          out += `<span class="tok-fn">${escapeHtml(ident)}</span>${escapeHtml(followedByParen)}`;
-        } else {
-          out += escapeHtml(ident);
-        }
-      }
-      lastIndex = TOKEN_RE.lastIndex;
-    }
-    out += escapeHtml(src.slice(lastIndex));
-    return out;
-  }
-
-  /* ==============================================================
-     EDITOR: gutter, highlighting, scroll sync, cursor position
-  =============================================================== */
-  function updateGutter() {
-    const lines = codeEl.value.split('\n').length;
-    let s = '';
-    for (let i = 1; i <= lines; i++) s += i + '\n';
-    gutterEl.textContent = s;
-  }
-
-  function updateHighlight() {
-    // trailing newline keeps last empty line height in sync
-    highlightCode.innerHTML = highlight(codeEl.value) + '\n';
-  }
-
-  function updateCursorPos() {
-    const value = codeEl.value;
-    const pos = codeEl.selectionStart;
-    const before = value.slice(0, pos);
-    const line = before.split('\n').length;
-    const col = pos - before.lastIndexOf('\n');
-    cursorPosEl.textContent = `Ln ${line}, Col ${col}`;
-  }
-
-  function syncScroll() {
-    gutterEl.scrollTop = codeEl.scrollTop;
-    highlightCode.parentElement.scrollTop = codeEl.scrollTop;
-    highlightCode.parentElement.scrollLeft = codeEl.scrollLeft;
-  }
-
-  function refreshEditor() {
-    updateGutter();
-    updateHighlight();
-    updateCursorPos();
-    syncScroll();
-  }
-
-  codeEl.addEventListener('input', refreshEditor);
-  codeEl.addEventListener('scroll', syncScroll);
-  codeEl.addEventListener('keyup', updateCursorPos);
-  codeEl.addEventListener('click', updateCursorPos);
-
-  codeEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      insertAtCursor('    ');
-    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      runCode();
-    } else if (e.key === 'Enter') {
-      // auto-indent: continue the previous line's leading whitespace,
-      // and add one extra level after an opening brace
-      const start = codeEl.selectionStart;
-      const value = codeEl.value;
-      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      const currentLine = value.slice(lineStart, start);
-      const indentMatch = currentLine.match(/^[ \t]*/);
-      let indent = indentMatch ? indentMatch[0] : '';
-      if (/[{[(]\s*$/.test(currentLine)) indent += '    ';
-      if (indent) {
-        e.preventDefault();
-        insertAtCursor('\n' + indent);
-      }
-    }
-  });
-
-  /* ==============================================================
-     COPY / CLEAR
-  =============================================================== */
-  btnCopy.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(codeEl.value);
-      flashButton(btnCopy, 'Copied');
-    } catch (err) {
-      codeEl.select();
-      document.execCommand('copy');
-      flashButton(btnCopy, 'Copied');
-    }
-  });
-
-  btnClear.addEventListener('click', () => {
-    if (!codeEl.value.trim() || confirm('Clear the editor? This cannot be undone.')) {
-      codeEl.value = '';
-      refreshEditor();
-      codeEl.focus();
-      setStatus('idle', 'Ready');
-    }
-  });
-
-  function flashButton(btn, text) {
-    const span = btn.querySelector('span');
-    const original = span.textContent;
-    span.textContent = text;
-    setTimeout(() => { span.textContent = original; }, 1200);
-  }
-
-  /* ==============================================================
-     TABS: Output / Diagnostics
-  =============================================================== */
-  function activateTab(which) {
-    const outActive = which === 'output';
-    tabOutput.classList.toggle('is-active', outActive);
-    tabErrors.classList.toggle('is-active', !outActive);
-    tabOutput.setAttribute('aria-selected', String(outActive));
-    tabErrors.setAttribute('aria-selected', String(!outActive));
-    panelOutput.hidden = !outActive;
-    panelErrors.hidden = outActive;
-  }
-  tabOutput.addEventListener('click', () => activateTab('output'));
-  tabErrors.addEventListener('click', () => activateTab('errors'));
-
-  function setErrorBadge(count) {
-    if (count > 0) {
-      errorBadge.hidden = false;
-      errorBadge.textContent = String(count);
-    } else {
-      errorBadge.hidden = true;
-    }
-  }
-
-  /* ==============================================================
-     STATUS BAR
-  =============================================================== */
-  function setStatus(kind, text) {
-    statusDot.className = 'statusbar__dot' + (kind === 'busy' ? ' is-busy' : kind === 'ok' ? ' is-ok' : kind === 'error' ? ' is-error' : '');
-    statusText.textContent = text;
-  }
-
-  /* ==============================================================
-     COMPILE & RUN â€” via the public Piston execution API
-  =============================================================== */
-  const PISTON_URL = 'https://emkc.org/api/v2/piston/execute';
-  let isRunning = false;
-
-  async function runCode() {
-    if (isRunning) return;
-    const source = codeEl.value;
-    if (!source.trim()) {
-      setStatus('error', 'Nothing to run â€” write some code first');
-      return;
+        flex-direction: column;
     }
 
-    isRunning = true;
-    btnRun.disabled = true;
-    runLabel.textContent = 'Runningâ€¦';
-    setStatus('busy', 'Compilingâ€¦');
-    runMeta.textContent = '';
-
-    const started = performance.now();
-
-    try {
-      const res = await fetch(PISTON_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language: 'c',
-          version: '*',
-          files: [{ name: 'main.c', content: source }],
-          stdin: stdinBox.value,
-          compile_timeout: 10000,
-          run_timeout: 5000,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server responded ${res.status}`);
-      }
-
-      const data = await res.json();
-      const elapsed = ((performance.now() - started) / 1000).toFixed(2);
-      renderResult(data, elapsed);
-
-    } catch (err) {
-      showErrors(`Could not reach the compiler service.\n\n${err.message}\n\nCheck your internet connection and try again.`);
-      activateTab('errors');
-      setStatus('error', 'Network error');
-    } finally {
-      isRunning = false;
-      btnRun.disabled = false;
-      runLabel.textContent = 'Run';
-    }
-  }
-
-  function renderResult(data, elapsed) {
-    const compile = data.compile || {};
-    const run = data.run || {};
-    const compileErr = (compile.stderr || '').trim();
-    const hadCompileFailure = compile.code && compile.code !== 0;
-
-    if (hadCompileFailure || (compileErr && !run.stdout && run.code !== 0)) {
-      // Real compile-time failure: show diagnostics, no program output
-      const errorCount = (compileErr.match(/error:/g) || []).length || 1;
-      showErrors(compileErr || 'Compilation failed with no diagnostic output.');
-      setErrorBadge(errorCount);
-      showOutput('', true);
-      activateTab('errors');
-      setStatus('error', `Compilation failed Â· ${errorCount} error${errorCount === 1 ? '' : 's'}`);
-      runMeta.textContent = `exit ${compile.code}`;
-      return;
+    .toolbar-left,
+    .toolbar-right {
+        width: 100%;
     }
 
-    // Compiled fine â€” show warnings (if any) in diagnostics, program output in Output
-    if (compileErr) {
-      const warningCount = (compileErr.match(/warning:/g) || []).length;
-      showErrors(compileErr);
-      setErrorBadge(warningCount);
-    } else {
-      showErrors('');
-      setErrorBadge(0);
+    .toolbar-right {
+        justify-content: flex-end;
     }
 
-    const stdout = run.stdout || '';
-    const stderr = run.stderr || '';
-    let combined = stdout;
-    if (stderr.trim()) {
-      combined += (combined && !combined.endsWith('\n') ? '\n' : '') + stderr;
+    .editor {
+        height: 380px;
     }
-    showOutput(combined || '(program produced no output)', false);
+}
 
-    const exitCode = run.code;
-    runMeta.textContent = `exit ${exitCode} Â· ${elapsed}s`;
 
-    if (exitCode === 0) {
-      setStatus('ok', `Finished Â· exit 0 Â· ${elapsed}s`);
-    } else if (run.signal) {
-      setStatus('error', `Terminated by ${run.signal} Â· ${elapsed}s`);
-      activateTab('output');
-    } else {
-      setStatus('error', `Exited with code ${exitCode} Â· ${elapsed}s`);
+@media (max-width: 500px) {
+
+    .topbar {
+        padding: 10px 3%;
     }
-  }
 
-  function showOutput(text, isEmpty) {
-    if (isEmpty || !text) {
-      outputStream.hidden = true;
-      outputEmpty.hidden = false;
-    } else {
-      outputStream.hidden = false;
-      outputEmpty.hidden = true;
-      outputStream.textContent = text;
+    .brand h1 {
+        font-size: 17px;
     }
-  }
 
-  function showErrors(text) {
-    if (!text || !text.trim()) {
-      errorsStream.hidden = true;
-      errorsEmpty.hidden = false;
-    } else {
-      errorsStream.hidden = false;
-      errorsEmpty.hidden = true;
-      errorsStream.textContent = text;
+    .brand small {
+        font-size: 11px;
     }
-  }
 
-  btnRun.addEventListener('click', runCode);
+    .logo {
+        width: 39px;
+        height: 39px;
+    }
 
-  /* ==============================================================
-     INIT
-  =============================================================== */
-  codeEl.value = EXAMPLES['Hello, World'];
-  refreshEditor();
-  setStatus('idle', 'Ready');
-})();
+    .hero {
+        padding-top: 30px;
+    }
+
+    .hero h2 {
+        font-size: 32px;
+    }
+
+    .hero p {
+        font-size: 14px;
+    }
+
+    .features {
+        grid-template-columns: 1fr;
+    }
+
+    .tool-btn,
+    .clear-btn,
+    select {
+        flex: 1;
+    }
+
+    .run-btn {
+        width: 100%;
+    }
+
+    .line-numbers {
+        width: 45px;
+
+        padding-left: 5px;
+        padding-right: 7px;
+
+        font-size: 13px;
+    }
+
+    #code {
+        padding: 15px 12px;
+
+        font-size: 13px;
+    }
+}
