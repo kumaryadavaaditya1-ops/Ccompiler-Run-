@@ -1,61 +1,385 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta name="google-site-verification" content="yrehLwDZqLyOYerATvWq6pBE7BnoJPGLg83RvQYj-W4" />
+
+    <!-- Google Search Console verification -->
+    <!-- KEEP YOUR EXISTING GOOGLE VERIFICATION CODE HERE -->
+    <meta name="google-site-verification" content="YOUR_EXISTING_VERIFICATION_CODE">
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#0b1220">
+
+    <meta name="description"
+          content="Ccompiler Run is a simple online C compiler for writing, compiling and running C programs with input, output and error messages.">
+
+    <meta name="author"
+          content="Aaditya Kumar YV">
+
+    <meta name="robots"
+          content="index, follow">
+
     <title>Ccompiler Run</title>
-    <link rel="stylesheet" href="style.css">
+
+    <link rel="stylesheet"
+          href="style.css">
+
 </head>
 
 <body>
 
-<div class="container">
+    <!-- ================= HEADER ================= -->
 
-    <h1>Ccompiler Run</h1>
-    <p>Write, Compile and Run C Code</p>
+    <header class="topbar">
 
-    <textarea id="code">#include <stdio.h>
+        <div class="brand">
 
-int main() {
-    printf("Hello World!");
+            <div class="brand-icon">
+                C
+            </div>
+
+            <div>
+                <h1>Ccompiler Run</h1>
+                <p>Online C Compiler</p>
+            </div>
+
+        </div>
+
+        <div class="header-badge">
+            C / GCC
+        </div>
+
+    </header>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="container">
+
+
+        <!-- HERO -->
+
+        <section class="hero">
+
+            <div>
+
+                <span class="eyebrow">
+                    ONLINE C DEVELOPMENT
+                </span>
+
+                <h2>
+                    Write. Compile. Run.
+                </h2>
+
+                <p>
+                    Write C programs directly in your browser,
+                    provide input and see output or compiler errors instantly.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= EDITOR CARD ================= -->
+
+        <section class="card editor-card">
+
+            <div class="card-header">
+
+                <div>
+
+                    <h3>
+                        C Code
+                    </h3>
+
+                    <span id="codeStatus">
+                        Ready
+                    </span>
+
+                </div>
+
+                <div class="header-actions">
+
+                    <button
+                        class="small-btn"
+                        onclick="copyCode()">
+
+                        Copy
+
+                    </button>
+
+                    <button
+                        class="small-btn"
+                        onclick="clearCode()">
+
+                        Clear
+
+                    </button>
+
+                    <button
+                        class="small-btn"
+                        onclick="resetCode()">
+
+                        Reset
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- EDITOR -->
+
+            <div class="editor-wrapper">
+
+                <div
+                    id="lineNumbers"
+                    class="line-numbers">
+                    1
+                </div>
+
+                <textarea
+                    id="code"
+                    spellcheck="false"
+                    autocapitalize="off"
+                    autocomplete="off"
+                    autocorrect="off"
+                    oninput="updateLineNumbers()"
+                    onscroll="syncEditorScroll()"
+                    onkeydown="handleEditorKeydown(event)"
+                    aria-label="C code editor">#include <stdio.h>
+
+int main(void)
+{
+    int a, b;
+
+    printf("Enter two numbers: ");
+    scanf("%d %d", &a, &b);
+
+    printf("Sum = %d\n", a + b);
+
     return 0;
 }</textarea>
 
-    <div class="symbol-keyboard">
-        <button onclick="insertSymbol('{')">{</button>
-        <button onclick="insertSymbol('}')">}</button>
-        <button onclick="insertSymbol('(')">(</button>
-        <button onclick="insertSymbol(')')">)</button>
-        <button onclick="insertSymbol('[')">[</button>
-        <button onclick="insertSymbol(']')">]</button>
-        <button onclick="insertSymbol(';')">;</button>
-        <button onclick="insertSymbol(',')">,</button>
-        <button onclick="insertSymbol('.')">.</button>
-        <button onclick="insertSymbol('#')">#</button>
-        <button onclick="insertSymbol('&lt;')">&lt;</button>
-        <button onclick="insertSymbol('&gt;')">&gt;</button>
-        <button onclick="insertSymbol('"')">"</button>
-        <button onclick="insertSymbol('=')">=</button>
-        <button onclick="insertSymbol('+')">+</button>
-        <button onclick="insertSymbol('-')">−</button>
-        <button onclick="insertSymbol('*')">*</button>
-        <button onclick="insertSymbol('/')">/</button>
-        <button onclick="insertSymbol('%')">%</button>
-        <button onclick="insertSymbol('&amp;')">&amp;</button>
-    </div>
+            </div>
 
-    <button class="run" onclick="runCode()">▶ Run Code</button>
 
-    <h3>Output:</h3>
-    <pre id="output"></pre>
+            <!-- SYMBOL KEYBOARD -->
 
-</div>
-<footer>
-    <span>© 2026</span>
-    <strong>Aaditya Kumar YV</strong>
-</footer>
-<script src="script.js"></script>
+            <div class="symbol-title">
+                C Symbols
+            </div>
+
+            <div class="symbol-keyboard">
+
+                <button onclick="insertSymbol('{')">{</button>
+                <button onclick="insertSymbol('}')">}</button>
+
+                <button onclick="insertSymbol('(')">(</button>
+                <button onclick="insertSymbol(')')">)</button>
+
+                <button onclick="insertSymbol('[')">[</button>
+                <button onclick="insertSymbol(']')">]</button>
+
+                <button onclick="insertSymbol(';')">;</button>
+                <button onclick="insertSymbol(',')">,</button>
+
+                <button onclick="insertSymbol('.')">.</button>
+                <button onclick="insertSymbol('#')">#</button>
+
+                <button onclick="insertSymbol('<')">&lt;</button>
+                <button onclick="insertSymbol('>')">&gt;</button>
+
+                <button onclick="insertSymbol('&quot;')">&quot;</button>
+                <button onclick="insertSymbol('=')">=</button>
+
+                <button onclick="insertSymbol('+')">+</button>
+                <button onclick="insertSymbol('-')">−</button>
+
+                <button onclick="insertSymbol('*')">*</button>
+                <button onclick="insertSymbol('/')">/</button>
+
+                <button onclick="insertSymbol('%')">%</button>
+                <button onclick="insertSymbol('&amp;')">&amp;</button>
+
+                <button onclick="insertSymbol('!')">!</button>
+                <button onclick="insertSymbol('|')">|</button>
+
+                <button onclick="insertSymbol(':')">:</button>
+                <button onclick="insertSymbol('?')">?</button>
+
+            </div>
+
+
+            <!-- ================= INPUT ================= -->
+
+            <div class="input-section">
+
+                <div class="section-title-row">
+
+                    <h3>
+                        Program Input
+                    </h3>
+
+                    <span>
+                        Used by scanf()
+                    </span>
+
+                </div>
+
+                <textarea
+                    id="input"
+                    class="input-box"
+                    spellcheck="false"
+                    placeholder="Example:
+10 20
+
+For scanf(), enter the values your program needs."></textarea>
+
+            </div>
+
+
+            <!-- ================= RUN ================= -->
+
+            <button
+                id="runButton"
+                class="run-button"
+                onclick="runCode()">
+
+                <span id="runIcon">▶</span>
+
+                <span id="runText">
+                    Run Code
+                </span>
+
+            </button>
+
+
+            <!-- ================= OUTPUT ================= -->
+
+            <div class="output-section">
+
+                <div class="section-title-row">
+
+                    <h3>
+                        Output
+                    </h3>
+
+                    <span id="resultStatus">
+                        Waiting for program
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="output"
+                    class="output-box">
+
+                    <span class="output-placeholder">
+                        Your program output will appear here.
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="executionInfo"
+                    class="execution-info">
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= FEATURES ================= -->
+
+        <section class="features">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    ▶
+                </div>
+
+                <h3>
+                    Run C Programs
+                </h3>
+
+                <p>
+                    Compile and execute C source code online.
+                </p>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    ⚠
+                </div>
+
+                <h3>
+                    Error Detection
+                </h3>
+
+                <p>
+                    Compilation and runtime errors are displayed clearly.
+                </p>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    ⌨
+                </div>
+
+                <h3>
+                    Mobile Friendly
+                </h3>
+
+                <p>
+                    Use the C symbol keyboard directly on your phone.
+                </p>
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer>
+
+        <div class="footer-brand">
+            Ccompiler Run
+        </div>
+
+        <p>
+            Write • Compile • Run C
+        </p>
+
+        <div class="copyright">
+            © 2026 Aaditya Kumar YV
+        </div>
+
+    </footer>
+
+
+    <script src="script.js"></script>
 
 </body>
+
 </html>
