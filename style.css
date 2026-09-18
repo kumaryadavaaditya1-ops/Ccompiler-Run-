@@ -86,3 +86,19 @@ pre {
     text-align: left;
     white-space: pre-wrap;
 }
+footer {
+    margin-top: 40px;
+    padding: 24px 10px;
+    text-align: center;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: #64748b;
+}
+
+footer strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 16px;
+    color: #e2e8f0;
+    letter-spacing: 1px;
+}
