@@ -9,24 +9,49 @@
 
 <body>
 
-    <div class="container">
-        <h1>Online C Compiler</h1>
-        <p>Write, Compile and Run C Code</p>
+<div class="container">
 
-        <textarea id="code" placeholder="Write your C code here...">#include <stdio.h>
+    <h1>Online C Compiler</h1>
+    <p>Write, Compile and Run C Code</p>
+
+    <textarea id="code">#include <stdio.h>
 
 int main() {
     printf("Hello World!");
     return 0;
 }</textarea>
 
-        <button onclick="runCode()">▶ Run Code</button>
-
-        <h3>Output:</h3>
-        <pre id="output"></pre>
+    <div class="symbol-keyboard">
+        <button onclick="insertSymbol('{')">{</button>
+        <button onclick="insertSymbol('}')">}</button>
+        <button onclick="insertSymbol('(')">(</button>
+        <button onclick="insertSymbol(')')">)</button>
+        <button onclick="insertSymbol('[')">[</button>
+        <button onclick="insertSymbol(']')">]</button>
+        <button onclick="insertSymbol(';')">;</button>
+        <button onclick="insertSymbol(',')">,</button>
+        <button onclick="insertSymbol('.')">.</button>
+        <button onclick="insertSymbol('#')">#</button>
+        <button onclick="insertSymbol('&lt;')">&lt;</button>
+        <button onclick="insertSymbol('&gt;')">&gt;</button>
+        <button onclick="insertSymbol('"')">"</button>
+        <button onclick="insertSymbol('=')">=</button>
+        <button onclick="insertSymbol('+')">+</button>
+        <button onclick="insertSymbol('-')">−</button>
+        <button onclick="insertSymbol('*')">*</button>
+        <button onclick="insertSymbol('/')">/</button>
+        <button onclick="insertSymbol('%')">%</button>
+        <button onclick="insertSymbol('&amp;')">&amp;</button>
     </div>
 
-    <script src="script.js"></script>
+    <button class="run" onclick="runCode()">▶ Run Code</button>
+
+    <h3>Output:</h3>
+    <pre id="output"></pre>
+
+</div>
+
+<script src="script.js"></script>
 
 </body>
 </html>
