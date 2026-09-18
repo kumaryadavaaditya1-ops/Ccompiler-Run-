@@ -1,8 +1,3 @@
-/* =========================================================
-   Ccompiler Run - Real Online C Compiler
-   Compiler engine: Judge0 CE
-   ========================================================= */
-
 const JUDGE0_URL = "https://ce.judge0.com";
 
 const editor = document.getElementById("codeEditor");
@@ -10,42 +5,13 @@ const inputBox = document.getElementById("programInput");
 const outputBox = document.getElementById("output");
 const runButton = document.getElementById("runButton");
 
-/* ---------------------------------------------------------
-   Default C program
-   --------------------------------------------------------- */
-
-if (editor && !editor.value.trim()) {
-    editor.value =
-`#include <stdio.h>
-
-int main(void)
-{
-    int a, b;
-
-    printf("Enter two numbers: ");
-    scanf("%d %d", &a, &b);
-
-    printf("Sum = %d\\n", a + b);
-
-    return 0;
-}`;
-}
-
-/* ---------------------------------------------------------
-   Output helper
-   --------------------------------------------------------- */
 
 function showOutput(text) {
-    if (!outputBox) return;
     outputBox.textContent = text;
 }
 
-/* ---------------------------------------------------------
-   UTF-8 Base64
-   Judge0 supports base64_encoded=true.
-   This makes special characters safer.
-   --------------------------------------------------------- */
 
+/* Convert text to Base64 */
 function encodeBase64(text) {
     const bytes = new TextEncoder().encode(text);
     let binary = "";
@@ -57,6 +23,8 @@ function encodeBase64(text) {
     return btoa(binary);
 }
 
+
+/* Convert Base64 back to normal text */
 function decodeBase64(text) {
     if (!text) return "";
 
@@ -69,42 +37,35 @@ function decodeBase64(text) {
         }
 
         return new TextDecoder().decode(bytes);
-    } catch (error) {
+    } catch {
         return text;
     }
 }
 
-/* ---------------------------------------------------------
-   Find an available C compiler automatically
-   --------------------------------------------------------- */
 
+/* Find an available C compiler */
 async function getCLanguage() {
 
-    const response = await fetch(`${JUDGE0_URL}/languages/`, {
-        method: "GET",
-        headers: {
-            "Accept": "application/json"
-        },
-        cache: "no-store"
-    });
+    const response = await fetch(
+        `${JUDGE0_URL}/languages/`,
+        {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        }
+    );
+
+    const data = await response.json();
 
     if (!response.ok) {
         throw new Error(
-            `Cannot load compiler languages. HTTP ${response.status}`
+            `Unable to connect to compiler. HTTP ${response.status}`
         );
     }
 
-    const languages = await response.json();
+    const languages = data.filter(language => {
 
-    /*
-       Prefer newer GCC C versions when available.
-       Current Judge0 CE examples include:
-       48 = C GCC 7.4.0
-       49 = C GCC 8.3.0
-       50 = C GCC 9.2.0
-    */
-
-    const cLanguages = languages.filter(language => {
         const name = String(language.name || "").toLowerCase();
 
         return (
@@ -113,39 +74,21 @@ async function getCLanguage() {
         );
     });
 
-    if (!cLanguages.length) {
-        throw new Error("No C/GCC compiler is currently available.");
+    if (languages.length === 0) {
+        throw new Error("C compiler is currently unavailable.");
     }
 
-    function gccVersion(language) {
-        const match = String(language.name).match(
-            /gcc\s+(\d+)\.(\d+)\.(\d+)/i
-        );
-
-        if (!match) return 0;
-
-        return (
-            Number(match[1]) * 1000000 +
-            Number(match[2]) * 1000 +
-            Number(match[3])
-        );
-    }
-
-    cLanguages.sort((a, b) => gccVersion(b) - gccVersion(a));
-
-    return cLanguages[0];
+    return languages[languages.length - 1];
 }
 
-/* ---------------------------------------------------------
-   Create Judge0 submission
-   --------------------------------------------------------- */
 
-async function createSubmission(sourceCode, stdin, languageId) {
+/* Send C program to compiler */
+async function submitCode(sourceCode, input, languageId) {
 
-    const body = {
+    const requestData = {
         source_code: encodeBase64(sourceCode),
         language_id: languageId,
-        stdin: encodeBase64(stdin || "")
+        stdin: encodeBase64(input)
     };
 
     const response = await fetch(
@@ -158,15 +101,9 @@ async function createSubmission(sourceCode, stdin, languageId) {
                 "Accept": "application/json"
             },
 
-            body: JSON.stringify(body)
+            body: JSON.stringify(requestData)
         }
     );
-
-    /*
-       IMPORTANT:
-       Read the response body even when HTTP is 422.
-       This tells us the real Judge0 error.
-    */
 
     const text = await response.text();
 
@@ -175,103 +112,61 @@ async function createSubmission(sourceCode, stdin, languageId) {
     try {
         data = JSON.parse(text);
     } catch {
-        data = {
-            error: text
-        };
+        data = { error: text };
     }
 
     if (!response.ok) {
 
-        let details = "";
-
-        if (data && typeof data === "object") {
-
-            if (data.error) {
-                details = String(data.error);
-            } else {
-                details = JSON.stringify(data, null, 2);
-            }
-
-        } else {
-            details = String(data);
-        }
-
         throw new Error(
-            `Compiler request failed (HTTP ${response.status})\n\n${details}`
+            `Compiler error HTTP ${response.status}\n\n` +
+            (data.error || JSON.stringify(data))
         );
     }
 
     if (!data.token) {
-        throw new Error(
-            "Compiler did not return a submission token."
-        );
+        throw new Error("Compiler did not return a token.");
     }
 
     return data.token;
 }
 
-/* ---------------------------------------------------------
-   Get submission result
-   --------------------------------------------------------- */
 
-async function getSubmission(token) {
+/* Get result */
+async function getResult(token) {
 
     const response = await fetch(
-        `${JUDGE0_URL}/submissions/${encodeURIComponent(token)}?base64_encoded=true`,
+        `${JUDGE0_URL}/submissions/${token}?base64_encoded=true`,
         {
             method: "GET",
             headers: {
                 "Accept": "application/json"
-            },
-            cache: "no-store"
+            }
         }
     );
 
-    const text = await response.text();
-
-    let data;
-
-    try {
-        data = JSON.parse(text);
-    } catch {
-        data = {
-            error: text
-        };
-    }
+    const data = await response.json();
 
     if (!response.ok) {
         throw new Error(
-            `Compiler result request failed (HTTP ${response.status})\n\n` +
-            JSON.stringify(data, null, 2)
+            `Result error HTTP ${response.status}`
         );
     }
 
     return data;
 }
 
-/* ---------------------------------------------------------
-   Wait until compilation/execution finishes
-   --------------------------------------------------------- */
 
+/* Wait for compilation */
 async function waitForResult(token) {
 
-    const maxAttempts = 60;
+    for (let i = 0; i < 60; i++) {
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const result = await getResult(token);
 
-        const result = await getSubmission(token);
-
-        /*
-           Judge0:
-           1 = In Queue
-           2 = Processing
-           3+ = Finished
-        */
-
-        const statusId =
-            result.status && Number(result.status.id);
-
-        if (statusId >= 3) {
+        if (
+            result.status &&
+            Number(result.status.id) >= 3
+        ) {
             return result;
         }
 
@@ -280,184 +175,138 @@ async function waitForResult(token) {
         });
     }
 
-    throw new Error(
-        "Compilation timed out while waiting for the compiler service."
-    );
+    throw new Error("Compiler timed out.");
 }
 
-/* ---------------------------------------------------------
-   Format final result
-   --------------------------------------------------------- */
 
-function formatResult(result) {
+/* Show compiler result */
+function displayResult(result) {
 
     const status =
-        result.status &&
-        result.status.description
-            ? result.status.description
-            : "Unknown";
+        result.status?.description || "Unknown";
 
-    const stdout = decodeBase64(result.stdout);
-    const stderr = decodeBase64(result.stderr);
-    const compileOutput = decodeBase64(result.compile_output);
-    const message = result.message || "";
+    const output =
+        decodeBase64(result.stdout);
 
-    let finalText = "";
+    const compilerError =
+        decodeBase64(result.compile_output);
 
-    finalText += `Status: ${status}\n`;
+    const runtimeError =
+        decodeBase64(result.stderr);
 
-    if (result.time !== null && result.time !== undefined) {
-        finalText += `Time: ${result.time} s\n`;
+    let text = `Status: ${status}\n\n`;
+
+    if (output) {
+        text += "OUTPUT\n";
+        text += "-------------------------\n";
+        text += output;
+        text += "\n\n";
     }
 
-    if (result.memory !== null && result.memory !== undefined) {
-        finalText += `Memory: ${result.memory} KB\n`;
+    if (compilerError) {
+        text += "COMPILER ERROR\n";
+        text += "-------------------------\n";
+        text += compilerError;
+        text += "\n\n";
     }
 
-    finalText += "\n";
-
-    if (stdout) {
-        finalText += "OUTPUT\n";
-        finalText += "------------------------------\n";
-        finalText += stdout;
-        if (!stdout.endsWith("\n")) finalText += "\n";
-        finalText += "\n";
+    if (runtimeError) {
+        text += "RUNTIME ERROR\n";
+        text += "-------------------------\n";
+        text += runtimeError;
+        text += "\n\n";
     }
 
-    if (compileOutput) {
-        finalText += "COMPILER ERROR\n";
-        finalText += "------------------------------\n";
-        finalText += compileOutput;
-        if (!compileOutput.endsWith("\n")) finalText += "\n";
-        finalText += "\n";
-    }
-
-    if (stderr) {
-        finalText += "RUNTIME ERROR\n";
-        finalText += "------------------------------\n";
-        finalText += stderr;
-        if (!stderr.endsWith("\n")) finalText += "\n";
-        finalText += "\n";
-    }
-
-    if (message) {
-        finalText += "MESSAGE\n";
-        finalText += "------------------------------\n";
-        finalText += message;
-        finalText += "\n";
+    if (result.message) {
+        text += "MESSAGE\n";
+        text += "-------------------------\n";
+        text += result.message;
     }
 
     if (
-        !stdout &&
-        !compileOutput &&
-        !stderr &&
-        !message &&
-        status === "Accepted"
+        !output &&
+        !compilerError &&
+        !runtimeError &&
+        !result.message
     ) {
-        finalText += "Program finished successfully with no output.\n";
+        text += "Program finished successfully.";
     }
 
-    return finalText.trim();
+    showOutput(text.trim());
 }
 
-/* ---------------------------------------------------------
-   RUN C PROGRAM
-   --------------------------------------------------------- */
 
+/* RUN BUTTON */
 async function runCode() {
 
-    if (!editor) {
-        alert("C code editor was not found.");
+    const code = editor.value;
+    const input = inputBox.value;
+
+    /* Do not run empty editor */
+    if (!code.trim()) {
+        showOutput("Please write C code first.");
         return;
     }
 
-    const sourceCode = editor.value;
-    const stdin = inputBox ? inputBox.value : "";
+    runButton.disabled = true;
+    runButton.textContent = "Running...";
 
-    if (!sourceCode.trim()) {
-        showOutput("Error: Please write some C code first.");
-        return;
-    }
-
-    if (runButton) {
-        runButton.disabled = true;
-        runButton.textContent = "Running...";
-    }
-
-    showOutput("Connecting to C compiler...\n");
+    showOutput("Connecting to C compiler...");
 
     try {
-
-        /* Step 1: Find C compiler */
-
-        showOutput(
-            "Finding available C/GCC compiler..."
-        );
 
         const language = await getCLanguage();
 
         showOutput(
-            `Using ${language.name}\n\nSubmitting program...`
+            `Compiler: ${language.name}\n\n` +
+            "Submitting code..."
         );
 
-        /* Step 2: Submit */
-
-        const token = await createSubmission(
-            sourceCode,
-            stdin,
+        const token = await submitCode(
+            code,
+            input,
             language.id
         );
 
-        /* Step 3: Wait */
-
         showOutput(
-            `Compiler: ${language.name}\n` +
-            `Submission created.\n\n` +
-            `Compiling and running...`
+            "Code submitted.\n\n" +
+            "Compiling and running..."
         );
 
-        const result = await waitForResult(token);
+        const result =
+            await waitForResult(token);
 
-        /* Step 4: Display */
-
-        showOutput(formatResult(result));
+        displayResult(result);
 
     } catch (error) {
 
         console.error(error);
 
         showOutput(
-            "COMPILER CONNECTION ERROR\n" +
-            "==============================\n\n" +
-            error.message +
-            "\n\n" +
-            "Check your internet connection and try again."
+            "ERROR\n" +
+            "=========================\n\n" +
+            error.message
         );
 
     } finally {
 
-        if (runButton) {
-            runButton.disabled = false;
-            runButton.textContent = "Run Code";
-        }
+        runButton.disabled = false;
+        runButton.textContent = "Run Code";
     }
 }
 
-/* ---------------------------------------------------------
-   Run button
-   --------------------------------------------------------- */
 
-if (runButton) {
-    runButton.addEventListener("click", runCode);
-}
+/* Run button */
+runButton.addEventListener(
+    "click",
+    runCode
+);
 
-/* ---------------------------------------------------------
-   Ctrl + Enter / Android keyboard alternative
-   --------------------------------------------------------- */
 
-if (editor) {
-
-    editor.addEventListener("keydown", function(event) {
+/* Ctrl + Enter */
+editor.addEventListener(
+    "keydown",
+    function(event) {
 
         if (
             (event.ctrlKey || event.metaKey) &&
@@ -467,16 +316,12 @@ if (editor) {
             runCode();
         }
 
-    });
-}
+    }
+);
 
-/* ---------------------------------------------------------
-   Symbol keyboard
-   --------------------------------------------------------- */
 
+/* Symbol keyboard */
 function insertSymbol(symbol) {
-
-    if (!editor) return;
 
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
@@ -486,17 +331,14 @@ function insertSymbol(symbol) {
         symbol +
         editor.value.substring(end);
 
-    const newPosition = start + symbol.length;
+    const position =
+        start + symbol.length;
 
     editor.focus();
 
-    editor.selectionStart = newPosition;
-    editor.selectionEnd = newPosition;
+    editor.selectionStart = position;
+    editor.selectionEnd = position;
 }
-
-/*
-   Make insertSymbol available to HTML onclick buttons.
-*/
 
 window.insertSymbol = insertSymbol;
 window.runCode = runCode;
