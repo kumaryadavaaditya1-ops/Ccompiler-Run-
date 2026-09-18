@@ -1,32 +1,22 @@
-/* =====================================================
-   CCOMPILER RUN
-   Online C Compiler Engine
-   Creator: Aaditya Kumar YV
-   ===================================================== */
+/* =========================================================
+   Ccompiler Run - Real Online C Compiler
+   Compiler engine: Judge0 CE
+   ========================================================= */
 
+const JUDGE0_URL = "https://ce.judge0.com";
 
-/*
-   Judge0 API
+const editor = document.getElementById("codeEditor");
+const inputBox = document.getElementById("programInput");
+const outputBox = document.getElementById("output");
+const runButton = document.getElementById("runButton");
 
-   Judge0 supports:
-   - C compilation
-   - program input
-   - stdout
-   - stderr
-   - compilation errors
-   - runtime errors
-   - execution time
-   - memory
-*/
+/* ---------------------------------------------------------
+   Default C program
+   --------------------------------------------------------- */
 
-const API_URL = "https://ce.judge0.com";
-
-const C_LANGUAGE_ID = 4;
-
-
-/* ================= DEFAULT CODE ================= */
-
-const DEFAULT_CODE = `#include <stdio.h>
+if (editor && !editor.value.trim()) {
+    editor.value =
+`#include <stdio.h>
 
 int main(void)
 {
@@ -35,747 +25,478 @@ int main(void)
     printf("Enter two numbers: ");
     scanf("%d %d", &a, &b);
 
-    printf("Sum = %d\\\\n", a + b);
+    printf("Sum = %d\\n", a + b);
 
     return 0;
 }`;
-
-
-/* ================= DOM ================= */
-
-const codeEditor =
-    document.getElementById("code");
-
-const inputEditor =
-    document.getElementById("input");
-
-const outputBox =
-    document.getElementById("output");
-
-const runButton =
-    document.getElementById("runButton");
-
-const runText =
-    document.getElementById("runText");
-
-const runIcon =
-    document.getElementById("runIcon");
-
-const codeStatus =
-    document.getElementById("codeStatus");
-
-const resultStatus =
-    document.getElementById("resultStatus");
-
-const lineNumbers =
-    document.getElementById("lineNumbers");
-
-const executionInfo =
-    document.getElementById("executionInfo");
-
-
-/* ================= INITIALIZE ================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        updateLineNumbers();
-
-        codeEditor.focus();
-
-    }
-);
-
-
-/* ================= LINE NUMBERS ================= */
-
-function updateLineNumbers() {
-
-    const lines =
-        codeEditor.value.split("\n").length;
-
-    let numbers = "";
-
-    for (let i = 1; i <= lines; i++) {
-
-        numbers += i + "\n";
-
-    }
-
-    lineNumbers.textContent =
-        numbers;
-
 }
 
+/* ---------------------------------------------------------
+   Output helper
+   --------------------------------------------------------- */
 
-/* ================= SCROLL SYNC ================= */
-
-function syncEditorScroll() {
-
-    lineNumbers.scrollTop =
-        codeEditor.scrollTop;
-
+function showOutput(text) {
+    if (!outputBox) return;
+    outputBox.textContent = text;
 }
 
+/* ---------------------------------------------------------
+   UTF-8 Base64
+   Judge0 supports base64_encoded=true.
+   This makes special characters safer.
+   --------------------------------------------------------- */
 
-/* ================= EDITOR KEYBOARD ================= */
+function encodeBase64(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
 
-function handleEditorKeydown(event) {
-
-    /*
-       Tab key
-       Insert 4 spaces instead of
-       leaving the textarea.
-    */
-
-    if (event.key === "Tab") {
-
-        event.preventDefault();
-
-        insertText("    ");
-
-        return;
-
+    for (const byte of bytes) {
+        binary += String.fromCharCode(byte);
     }
 
+    return btoa(binary);
+}
+
+function decodeBase64(text) {
+    if (!text) return "";
+
+    try {
+        const binary = atob(text);
+        const bytes = new Uint8Array(binary.length);
+
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
+        return new TextDecoder().decode(bytes);
+    } catch (error) {
+        return text;
+    }
+}
+
+/* ---------------------------------------------------------
+   Find an available C compiler automatically
+   --------------------------------------------------------- */
+
+async function getCLanguage() {
+
+    const response = await fetch(`${JUDGE0_URL}/languages/`, {
+        method: "GET",
+        headers: {
+            "Accept": "application/json"
+        },
+        cache: "no-store"
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            `Cannot load compiler languages. HTTP ${response.status}`
+        );
+    }
+
+    const languages = await response.json();
 
     /*
-       Auto-close brackets.
+       Prefer newer GCC C versions when available.
+       Current Judge0 CE examples include:
+       48 = C GCC 7.4.0
+       49 = C GCC 8.3.0
+       50 = C GCC 9.2.0
     */
 
-    const pairs = {
+    const cLanguages = languages.filter(language => {
+        const name = String(language.name || "").toLowerCase();
 
-        "{": "}",
-        "(": ")",
-        "[": "]",
-        "\"": "\""
+        return (
+            name.startsWith("c (") &&
+            name.includes("gcc")
+        );
+    });
 
+    if (!cLanguages.length) {
+        throw new Error("No C/GCC compiler is currently available.");
+    }
+
+    function gccVersion(language) {
+        const match = String(language.name).match(
+            /gcc\s+(\d+)\.(\d+)\.(\d+)/i
+        );
+
+        if (!match) return 0;
+
+        return (
+            Number(match[1]) * 1000000 +
+            Number(match[2]) * 1000 +
+            Number(match[3])
+        );
+    }
+
+    cLanguages.sort((a, b) => gccVersion(b) - gccVersion(a));
+
+    return cLanguages[0];
+}
+
+/* ---------------------------------------------------------
+   Create Judge0 submission
+   --------------------------------------------------------- */
+
+async function createSubmission(sourceCode, stdin, languageId) {
+
+    const body = {
+        source_code: encodeBase64(sourceCode),
+        language_id: languageId,
+        stdin: encodeBase64(stdin || "")
     };
 
+    const response = await fetch(
+        `${JUDGE0_URL}/submissions/?base64_encoded=true&wait=false`,
+        {
+            method: "POST",
 
-    if (pairs[event.key]) {
-
-        const start =
-            codeEditor.selectionStart;
-
-        const end =
-            codeEditor.selectionEnd;
-
-        const selected =
-            codeEditor.value.substring(
-                start,
-                end
-            );
-
-        event.preventDefault();
-
-        const closing =
-            pairs[event.key];
-
-        codeEditor.value =
-            codeEditor.value.substring(0, start) +
-            event.key +
-            selected +
-            closing +
-            codeEditor.value.substring(end);
-
-        codeEditor.selectionStart =
-            start + 1;
-
-        codeEditor.selectionEnd =
-            start + 1 + selected.length;
-
-        updateLineNumbers();
-
-    }
-
-}
-
-
-/* ================= INSERT TEXT ================= */
-
-function insertText(text) {
-
-    const start =
-        codeEditor.selectionStart;
-
-    const end =
-        codeEditor.selectionEnd;
-
-    codeEditor.value =
-        codeEditor.value.substring(0, start) +
-        text +
-        codeEditor.value.substring(end);
-
-    codeEditor.focus();
-
-    const position =
-        start + text.length;
-
-    codeEditor.selectionStart =
-        position;
-
-    codeEditor.selectionEnd =
-        position;
-
-    updateLineNumbers();
-
-}
-
-
-/* ================= SYMBOL BUTTON ================= */
-
-function insertSymbol(symbol) {
-
-    insertText(symbol);
-
-}
-
-
-/* ================= COPY ================= */
-
-async function copyCode() {
-
-    try {
-
-        await navigator.clipboard.writeText(
-            codeEditor.value
-        );
-
-        codeStatus.textContent =
-            "Copied";
-
-        setTimeout(
-            () => {
-                codeStatus.textContent =
-                    "Ready";
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
             },
-            1500
-        );
 
-    } catch (error) {
+            body: JSON.stringify(body)
+        }
+    );
 
-        codeStatus.textContent =
-            "Copy failed";
+    /*
+       IMPORTANT:
+       Read the response body even when HTTP is 422.
+       This tells us the real Judge0 error.
+    */
 
-    }
+    const text = await response.text();
 
-}
-
-
-/* ================= CLEAR ================= */
-
-function clearCode() {
-
-    codeEditor.value = "";
-
-    updateLineNumbers();
-
-    codeEditor.focus();
-
-    codeStatus.textContent =
-        "Editor cleared";
-
-}
-
-
-/* ================= RESET ================= */
-
-function resetCode() {
-
-    codeEditor.value =
-        DEFAULT_CODE;
-
-    inputEditor.value =
-        "10 20";
-
-    outputBox.innerHTML =
-        `<span class="output-placeholder">
-            Your program output will appear here.
-        </span>`;
-
-    executionInfo.textContent =
-        "";
-
-    resultStatus.textContent =
-        "Waiting for program";
-
-    codeStatus.textContent =
-        "Reset";
-
-    updateLineNumbers();
-
-    codeEditor.focus();
-
-}
-
-
-/* ================= RUN CODE ================= */
-
-async function runCode() {
-
-    const sourceCode =
-        codeEditor.value;
-
-    const stdin =
-        inputEditor.value;
-
-
-    /* Empty code check */
-
-    if (!sourceCode.trim()) {
-
-        showError(
-            "INPUT ERROR",
-            "Please enter a C program first."
-        );
-
-        return;
-
-    }
-
-
-    /* Loading state */
-
-    setRunning(true);
-
-    outputBox.innerHTML =
-        `<span class="output-warning">
-            Compiling and running your C program...
-        </span>`;
-
-    resultStatus.textContent =
-        "Running";
-
-    executionInfo.textContent =
-        "";
-
+    let data;
 
     try {
-
-        /*
-           Create submission
-        */
-
-        const response =
-            await fetch(
-                `${API_URL}/submissions/?base64_encoded=false&wait=false`,
-                {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-
-                        source_code:
-                            sourceCode,
-
-                        language_id:
-                            C_LANGUAGE_ID,
-
-                        stdin:
-                            stdin
-
-                    })
-
-                }
-            );
-
-
-        /*
-           HTTP error
-        */
-
-        if (!response.ok) {
-
-            let message =
-                `Compiler service returned HTTP ${response.status}.`;
-
-            try {
-
-                const errorData =
-                    await response.json();
-
-                if (errorData.error) {
-
-                    message =
-                        errorData.error;
-
-                }
-
-            } catch (_) {}
-
-            throw new Error(message);
-
-        }
-
-
-        /*
-           Submission response
-        */
-
-        const submission =
-            await response.json();
-
-
-        if (!submission.token) {
-
-            throw new Error(
-                "Compiler did not return a submission token."
-            );
-
-        }
-
-
-        /*
-           Wait for result
-        */
-
-        const result =
-            await waitForResult(
-                submission.token
-            );
-
-
-        /*
-           Display result
-        */
-
-        displayResult(result);
-
-
-    } catch (error) {
-
-        showError(
-            "CONNECTION ERROR",
-            error.message
-        );
-
-    } finally {
-
-        setRunning(false);
-
+        data = JSON.parse(text);
+    } catch {
+        data = {
+            error: text
+        };
     }
 
+    if (!response.ok) {
+
+        let details = "";
+
+        if (data && typeof data === "object") {
+
+            if (data.error) {
+                details = String(data.error);
+            } else {
+                details = JSON.stringify(data, null, 2);
+            }
+
+        } else {
+            details = String(data);
+        }
+
+        throw new Error(
+            `Compiler request failed (HTTP ${response.status})\n\n${details}`
+        );
+    }
+
+    if (!data.token) {
+        throw new Error(
+            "Compiler did not return a submission token."
+        );
+    }
+
+    return data.token;
 }
 
+/* ---------------------------------------------------------
+   Get submission result
+   --------------------------------------------------------- */
 
-/* ================= WAIT FOR RESULT ================= */
+async function getSubmission(token) {
+
+    const response = await fetch(
+        `${JUDGE0_URL}/submissions/${encodeURIComponent(token)}?base64_encoded=true`,
+        {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            },
+            cache: "no-store"
+        }
+    );
+
+    const text = await response.text();
+
+    let data;
+
+    try {
+        data = JSON.parse(text);
+    } catch {
+        data = {
+            error: text
+        };
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            `Compiler result request failed (HTTP ${response.status})\n\n` +
+            JSON.stringify(data, null, 2)
+        );
+    }
+
+    return data;
+}
+
+/* ---------------------------------------------------------
+   Wait until compilation/execution finishes
+   --------------------------------------------------------- */
 
 async function waitForResult(token) {
 
-    const maxAttempts = 45;
+    const maxAttempts = 60;
 
-    for (
-        let attempt = 0;
-        attempt < maxAttempts;
-        attempt++
-    ) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
 
-        await sleep(1000);
-
-
-        const response =
-            await fetch(
-                `${API_URL}/submissions/${token}?base64_encoded=false`
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Could not retrieve compiler result (${response.status}).`
-            );
-
-        }
-
-
-        const result =
-            await response.json();
-
+        const result = await getSubmission(token);
 
         /*
            Judge0:
            1 = In Queue
            2 = Processing
-           >2 = Finished
+           3+ = Finished
         */
 
-        if (
-            result.status &&
-            result.status.id > 2
-        ) {
+        const statusId =
+            result.status && Number(result.status.id);
 
+        if (statusId >= 3) {
             return result;
-
         }
 
+        await new Promise(resolve => {
+            setTimeout(resolve, 1000);
+        });
     }
-
 
     throw new Error(
-        "The compiler took too long to respond. Please try again."
+        "Compilation timed out while waiting for the compiler service."
     );
-
 }
 
+/* ---------------------------------------------------------
+   Format final result
+   --------------------------------------------------------- */
 
-/* ================= DISPLAY RESULT ================= */
+function formatResult(result) {
 
-function displayResult(result) {
+    const status =
+        result.status &&
+        result.status.description
+            ? result.status.description
+            : "Unknown";
 
-    const statusId =
-        result.status?.id;
+    const stdout = decodeBase64(result.stdout);
+    const stderr = decodeBase64(result.stderr);
+    const compileOutput = decodeBase64(result.compile_output);
+    const message = result.message || "";
 
-    const statusDescription =
-        result.status?.description ||
-        "Unknown";
+    let finalText = "";
 
+    finalText += `Status: ${status}\n`;
 
-    /*
-       Compilation error
-    */
+    if (result.time !== null && result.time !== undefined) {
+        finalText += `Time: ${result.time} s\n`;
+    }
 
-    if (result.compile_output) {
+    if (result.memory !== null && result.memory !== undefined) {
+        finalText += `Memory: ${result.memory} KB\n`;
+    }
 
-        showError(
-            "COMPILATION ERROR",
-            result.compile_output
-        );
+    finalText += "\n";
 
-        resultStatus.textContent =
-            "Compilation failed";
+    if (stdout) {
+        finalText += "OUTPUT\n";
+        finalText += "------------------------------\n";
+        finalText += stdout;
+        if (!stdout.endsWith("\n")) finalText += "\n";
+        finalText += "\n";
+    }
 
+    if (compileOutput) {
+        finalText += "COMPILER ERROR\n";
+        finalText += "------------------------------\n";
+        finalText += compileOutput;
+        if (!compileOutput.endsWith("\n")) finalText += "\n";
+        finalText += "\n";
+    }
+
+    if (stderr) {
+        finalText += "RUNTIME ERROR\n";
+        finalText += "------------------------------\n";
+        finalText += stderr;
+        if (!stderr.endsWith("\n")) finalText += "\n";
+        finalText += "\n";
+    }
+
+    if (message) {
+        finalText += "MESSAGE\n";
+        finalText += "------------------------------\n";
+        finalText += message;
+        finalText += "\n";
+    }
+
+    if (
+        !stdout &&
+        !compileOutput &&
+        !stderr &&
+        !message &&
+        status === "Accepted"
+    ) {
+        finalText += "Program finished successfully with no output.\n";
+    }
+
+    return finalText.trim();
+}
+
+/* ---------------------------------------------------------
+   RUN C PROGRAM
+   --------------------------------------------------------- */
+
+async function runCode() {
+
+    if (!editor) {
+        alert("C code editor was not found.");
         return;
-
     }
 
+    const sourceCode = editor.value;
+    const stdin = inputBox ? inputBox.value : "";
 
-    /*
-       Runtime error
-    */
-
-    if (result.stderr) {
-
-        showError(
-            "RUNTIME ERROR",
-            result.stderr
-        );
-
-        resultStatus.textContent =
-            "Runtime error";
-
-        showExecutionInfo(
-            result
-        );
-
+    if (!sourceCode.trim()) {
+        showOutput("Error: Please write some C code first.");
         return;
-
     }
 
-
-    /*
-       Judge0 message
-    */
-
-    if (result.message) {
-
-        showError(
-            "EXECUTION ERROR",
-            result.message
-        );
-
-        resultStatus.textContent =
-            statusDescription;
-
-        showExecutionInfo(
-            result
-        );
-
-        return;
-
+    if (runButton) {
+        runButton.disabled = true;
+        runButton.textContent = "Running...";
     }
 
+    showOutput("Connecting to C compiler...\n");
 
-    /*
-       Time limit
-    */
+    try {
 
-    if (statusId === 5) {
+        /* Step 1: Find C compiler */
 
-        showError(
-            "TIME LIMIT EXCEEDED",
-            "Your program exceeded the allowed execution time."
+        showOutput(
+            "Finding available C/GCC compiler..."
         );
 
-        resultStatus.textContent =
-            "Time limit";
+        const language = await getCLanguage();
 
-        showExecutionInfo(
-            result
+        showOutput(
+            `Using ${language.name}\n\nSubmitting program...`
         );
 
-        return;
+        /* Step 2: Submit */
 
+        const token = await createSubmission(
+            sourceCode,
+            stdin,
+            language.id
+        );
+
+        /* Step 3: Wait */
+
+        showOutput(
+            `Compiler: ${language.name}\n` +
+            `Submission created.\n\n` +
+            `Compiling and running...`
+        );
+
+        const result = await waitForResult(token);
+
+        /* Step 4: Display */
+
+        showOutput(formatResult(result));
+
+    } catch (error) {
+
+        console.error(error);
+
+        showOutput(
+            "COMPILER CONNECTION ERROR\n" +
+            "==============================\n\n" +
+            error.message +
+            "\n\n" +
+            "Check your internet connection and try again."
+        );
+
+    } finally {
+
+        if (runButton) {
+            runButton.disabled = false;
+            runButton.textContent = "Run Code";
+        }
     }
-
-
-    /*
-       Memory limit
-    */
-
-    if (statusId === 6) {
-
-        showError(
-            "MEMORY LIMIT EXCEEDED",
-            "Your program used more memory than allowed."
-        );
-
-        resultStatus.textContent =
-            "Memory limit";
-
-        showExecutionInfo(
-            result
-        );
-
-        return;
-
-    }
-
-
-    /*
-       Successful execution
-    */
-
-    const stdout =
-        result.stdout ?? "";
-
-
-    if (stdout.trim() === "") {
-
-        outputBox.innerHTML =
-            `<span class="output-success">
-                Program executed successfully.
-                No output was produced.
-            </span>`;
-
-    } else {
-
-        outputBox.textContent =
-            stdout;
-
-        outputBox.className =
-            "output-box output-success";
-
-    }
-
-
-    resultStatus.textContent =
-        "Accepted";
-
-    showExecutionInfo(
-        result
-    );
-
 }
 
+/* ---------------------------------------------------------
+   Run button
+   --------------------------------------------------------- */
 
-/* ================= ERROR DISPLAY ================= */
-
-function showError(title, message) {
-
-    outputBox.className =
-        "output-box output-error";
-
-    outputBox.textContent =
-        `${title}\n\n${message}`;
-
-    executionInfo.textContent =
-        "";
-
+if (runButton) {
+    runButton.addEventListener("click", runCode);
 }
 
+/* ---------------------------------------------------------
+   Ctrl + Enter / Android keyboard alternative
+   --------------------------------------------------------- */
 
-/* ================= EXECUTION INFO ================= */
+if (editor) {
 
-function showExecutionInfo(result) {
+    editor.addEventListener("keydown", function(event) {
 
-    const parts = [];
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            event.key === "Enter"
+        ) {
+            event.preventDefault();
+            runCode();
+        }
 
-    if (result.time) {
-
-        parts.push(
-            `Time: ${result.time}s`
-        );
-
-    }
-
-    if (result.memory !== null &&
-        result.memory !== undefined) {
-
-        parts.push(
-            `Memory: ${result.memory} KB`
-        );
-
-    }
-
-
-    executionInfo.textContent =
-        parts.join("  •  ");
-
+    });
 }
 
+/* ---------------------------------------------------------
+   Symbol keyboard
+   --------------------------------------------------------- */
 
-/* ================= RUNNING STATE ================= */
+function insertSymbol(symbol) {
 
-function setRunning(running) {
+    if (!editor) return;
 
-    runButton.disabled =
-        running;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
 
+    editor.value =
+        editor.value.substring(0, start) +
+        symbol +
+        editor.value.substring(end);
 
-    if (running) {
+    const newPosition = start + symbol.length;
 
-        runIcon.textContent =
-            "⏳";
+    editor.focus();
 
-        runText.textContent =
-            "Running...";
-
-        codeStatus.textContent =
-            "Compiling";
-
-    } else {
-
-        runIcon.textContent =
-            "▶";
-
-        runText.textContent =
-            "Run Code";
-
-        codeStatus.textContent =
-            "Ready";
-
-    }
-
+    editor.selectionStart = newPosition;
+    editor.selectionEnd = newPosition;
 }
 
+/*
+   Make insertSymbol available to HTML onclick buttons.
+*/
 
-/* ================= SLEEP ================= */
-
-function sleep(milliseconds) {
-
-    return new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                milliseconds
-            )
-    );
-
-}
+window.insertSymbol = insertSymbol;
+window.runCode = runCode;
