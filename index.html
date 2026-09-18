@@ -1,136 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>cc — Online C Compiler</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description"
+          content="Free online C compiler. Write, compile and run C programs online with input, output and error support.">
+
+    <meta name="keywords"
+          content="C compiler, online C compiler, C programming, run C code, C editor, C coding">
+
+    <meta name="author" content="CCompiler Run">
+
+    <title>CCompiler Run - Online C Compiler</title>
+
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div class="app">
-
-  <!-- ============ HEADER ============ -->
-  <header class="topbar">
+<header class="topbar">
     <div class="brand">
-      <svg class="brand__mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect x="2" y="2" width="44" height="44" rx="10" stroke="currentColor" stroke-width="3"/>
-        <path d="M31 17c-1.8-2-4.2-3-7-3-6 0-10 4.5-10 10s4 10 10 10c2.8 0 5.2-1 7-3" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-      </svg>
-      <div class="brand__text">
-        <span class="brand__title">cc</span>
-        <span class="brand__subtitle">online c compiler</span>
-      </div>
+        <div class="logo">&lt;/&gt;</div>
+        <div>
+            <h1>CCompiler <span>Run</span></h1>
+            <small>Online C Compiler</small>
+        </div>
     </div>
 
-    <div class="topbar__actions">
-      <label class="select" for="example-select">
-        <select id="example-select" aria-label="Load example program">
-          <option value="" disabled selected>Load example…</option>
-        </select>
-      </label>
-
-      <button class="btn btn--ghost" id="btn-copy" type="button" title="Copy code to clipboard">
-        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13H7" stroke="currentColor" stroke-width="1.6"/></svg>
-        <span>Copy</span>
-      </button>
-
-      <button class="btn btn--ghost" id="btn-clear" type="button" title="Clear editor">
-        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6m2 0-.6 9.4a1.5 1.5 0 0 1-1.5 1.4H8.1a1.5 1.5 0 0 1-1.5-1.4L6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <span>Clear</span>
-      </button>
-
-      <button class="btn btn--primary" id="btn-run" type="button" title="Compile &amp; run (Ctrl + Enter)">
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6 4.5v11l9-5.5-9-5.5Z"/></svg>
-        <span id="run-label">Run</span>
-      </button>
+    <div class="top-actions">
+        <button id="themeBtn" class="icon-btn" title="Toggle theme">☀️</button>
+        <button id="aboutBtn" class="about-btn">About</button>
     </div>
-  </header>
+</header>
 
-  <!-- ============ SYMBOL STRIP ============ -->
-  <nav class="symbols" id="symbols" aria-label="Insert C symbols">
-    <span class="symbols__label">Symbols</span>
-    <div class="symbols__row" id="symbols-row"></div>
-  </nav>
 
-  <!-- ============ MAIN WORKSPACE ============ -->
-  <main class="workspace">
+<main class="container">
 
-    <!-- Editor pane -->
-    <section class="pane pane--editor">
-      <div class="pane__bar">
-        <div class="file-tab">
-          <span class="file-tab__dot"></span>
-          <span>main.c</span>
-        </div>
-        <div class="pane__bar-meta" id="cursor-pos">Ln 1, Col 1</div>
-      </div>
-
-      <div class="editor" id="editor-shell">
-        <div class="editor__gutter" id="gutter">1</div>
-        <pre class="editor__highlight" id="highlight" aria-hidden="true"><code id="highlight-code"></code></pre>
-        <textarea
-          id="code"
-          class="editor__input"
-          spellcheck="false"
-          autocapitalize="off"
-          autocomplete="off"
-          autocorrect="off"
-          wrap="off"
-        ></textarea>
-      </div>
+    <section class="hero">
+        <h2>Write. Compile. Run.</h2>
+        <p>
+            Write and run your C programs online with a simple,
+            fast and beginner-friendly compiler.
+        </p>
     </section>
 
-    <!-- Output pane -->
-    <section class="pane pane--output">
-      <div class="pane__bar tabs" role="tablist" aria-label="Result views">
-        <button class="tab is-active" id="tab-output" role="tab" aria-selected="true" type="button">Output</button>
-        <button class="tab" id="tab-errors" role="tab" aria-selected="false" type="button">
-          Diagnostics <span class="tab__badge" id="error-badge" hidden>0</span>
-        </button>
-        <div class="pane__bar-meta" id="run-meta"></div>
-      </div>
 
-      <div class="output" id="panel-output">
-        <div class="output__empty" id="output-empty">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5 10 12l-6 5.5M13 17.5h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <p>Press <strong>Run</strong> to compile and execute your program.</p>
-          <p class="output__hint">stdin, stdout, stderr and exit codes are all wired up to a real GCC toolchain.</p>
+    <section class="compiler">
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+
+            <div class="toolbar-left">
+
+                <select id="exampleSelect">
+                    <option value="">Examples</option>
+                    <option value="hello">Hello World</option>
+                    <option value="sum">Add Two Numbers</option>
+                    <option value="factorial">Factorial</option>
+                    <option value="prime">Prime Number</option>
+                    <option value="fibonacci">Fibonacci Series</option>
+                    <option value="calculator">Calculator</option>
+                </select>
+
+                <button id="formatBtn" class="tool-btn">
+                    Format
+                </button>
+
+                <button id="copyBtn" class="tool-btn">
+                    Copy
+                </button>
+
+                <button id="downloadBtn" class="tool-btn">
+                    Download
+                </button>
+
+            </div>
+
+            <div class="toolbar-right">
+
+                <button id="clearBtn" class="clear-btn">
+                    Clear
+                </button>
+
+                <button id="runBtn" class="run-btn">
+                    ▶ Run Code
+                </button>
+
+            </div>
+
         </div>
-        <pre class="output__stream" id="output-stream" hidden></pre>
-      </div>
 
-      <div class="output" id="panel-errors" hidden>
-        <div class="output__empty" id="errors-empty">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 4 9 16H3l9-16Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9.5v4M12 16.5h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <p>No compiler errors yet.</p>
-          <p class="output__hint">Warnings and errors from GCC will show up here, line by line.</p>
+
+        <!-- Editor -->
+        <div class="editor-wrapper">
+
+            <div class="editor-header">
+                <div class="file-name">
+                    <span class="file-icon">C</span>
+                    main.c
+                </div>
+
+                <div id="status" class="status">
+                    Ready
+                </div>
+            </div>
+
+
+            <div class="editor">
+
+                <div id="lineNumbers" class="line-numbers">
+                    1
+                </div>
+
+                <textarea
+                    id="code"
+                    spellcheck="false"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    wrap="off"
+                >#include <stdio.h>
+
+int main()
+{
+    printf("Hello, World!");
+
+    return 0;
+}</textarea>
+
+            </div>
+
         </div>
-        <pre class="output__stream output__stream--errors" id="errors-stream" hidden></pre>
-      </div>
 
-      <div class="stdin-bar">
-        <label for="stdin-box">stdin</label>
-        <textarea id="stdin-box" placeholder="Input fed to your program via scanf / gets / fgets, one value per line…"></textarea>
-      </div>
+
+        <!-- Input -->
+        <section class="panel">
+
+            <div class="panel-header">
+                <h3>Input</h3>
+                <button id="clearInputBtn">Clear</button>
+            </div>
+
+            <textarea
+                id="input"
+                class="input-box"
+                placeholder="Enter program input here..."
+            ></textarea>
+
+        </section>
+
+
+        <!-- Output -->
+        <section class="panel output-panel">
+
+            <div class="panel-header">
+
+                <div class="output-title">
+                    <span class="terminal-dot"></span>
+                    <h3>Output</h3>
+                </div>
+
+                <button id="clearOutputBtn">
+                    Clear
+                </button>
+
+            </div>
+
+            <pre id="output" class="output">Program output will appear here...</pre>
+
+        </section>
+
     </section>
 
-  </main>
 
-  <footer class="statusbar">
-    <span class="statusbar__dot" id="status-dot"></span>
-    <span id="status-text">Ready</span>
-    <span class="statusbar__sep">·</span>
-    <span>GCC (C17)</span>
-    <span class="statusbar__sep">·</span>
-    <span>Ctrl/Cmd + Enter to run</span>
-  </footer>
+    <!-- Features -->
+    <section class="features">
 
-</div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Fast</h3>
+            <p>Compile and run your C programs quickly.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">💻</div>
+            <h3>Online Editor</h3>
+            <p>Write C programs directly in your browser.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🐛</div>
+            <h3>Error Messages</h3>
+            <p>See compiler errors and fix your code easily.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">📱</div>
+            <h3>Mobile Friendly</h3>
+            <p>Code comfortably from your phone or computer.</p>
+        </div>
+
+    </section>
+
+
+    <!-- About -->
+    <div id="aboutModal" class="modal">
+
+        <div class="modal-content">
+
+            <button id="closeModal" class="close-btn">
+                ×
+            </button>
+
+            <h2>About CCompiler Run</h2>
+
+            <p>
+                CCompiler Run is an online C programming environment
+                designed for students, beginners and developers.
+            </p>
+
+            <p>
+                Write your C code, provide input and run your program
+                directly from your browser.
+            </p>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<footer>
+    <p>
+        © <span id="year"></span> CCompiler Run
+    </p>
+
+    <p>
+        Built for learning C programming.
+    </p>
+</footer>
+
 
 <script src="script.js"></script>
+
 </body>
 </html>
